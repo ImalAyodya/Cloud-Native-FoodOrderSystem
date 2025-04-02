@@ -6,7 +6,7 @@ const cors = require('cors');
 const passport = require('passport');
 const nodemailer = require('nodemailer');
 const authRoutes = require('./routes/authRoutes');
-require('./config/passportConfig');  // Import Passport config
+require('./config/passportConfig');  //Import Passport configuration
 
 dotenv.config();
 
