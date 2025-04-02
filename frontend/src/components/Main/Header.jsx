@@ -27,6 +27,7 @@ const Header = () => {
   // Navigation items
   const navItems = [
     { name: 'Home', path: '/' },
+    { name: 'Resturents', path: '/resturents' },
     { name: 'Menu', path: '/menu' },
     { name: 'About', path: '/about' },
     { name: 'Contact', path: '/contact' },
@@ -80,10 +81,7 @@ const Header = () => {
 
             {/* Desktop Action Buttons */}
             <div className="flex items-center space-x-4">
-              <div className={`hidden lg:flex items-center ${isScrolled ? 'text-gray-700' : 'text-white'}`}>
-                <FaMapMarkerAlt className="mr-2 text-orange-500" />
-                <span className="text-sm">Select Location</span>
-              </div>
+              
               
               <Link 
                 to="/cart" 
