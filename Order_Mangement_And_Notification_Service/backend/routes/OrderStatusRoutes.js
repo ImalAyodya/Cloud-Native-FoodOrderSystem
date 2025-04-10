@@ -6,4 +6,9 @@ const OrderStatusController = require('../controllers/OrderStatusController');
 // http://localhost:5001/api/orders/update-status/:orderId
 router.put('/update-status/:orderId', OrderStatusController.updateOrderStatus);
 
+
+/**{
+  "newStatus": "On the way"
+}
+ */
 module.exports = router;
