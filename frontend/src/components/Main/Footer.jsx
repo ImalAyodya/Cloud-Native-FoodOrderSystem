@@ -32,31 +32,47 @@ const Footer = () => {
     <footer className="bg-gray-900 text-gray-300">
       <div className="max-w-7xl mx-auto">
         {/* Top section with newsletter */}
-        <div className="bg-orange-600 py-10 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-5xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-              <div className="mb-6 md:mb-0">
-                <h3 className="text-white text-xl font-bold">Stay updated with DigiDine!</h3>
-                <p className="text-orange-100 mt-2">Subscribe to our newsletter for exclusive offers and updates.</p>
-              </div>
-              <div className="flex-1 md:ml-6 max-w-md">
-                <form className="flex">
-                  <input
-                    type="email"
-                    placeholder="Your email address"
-                    className="flex-1 py-3 px-4 rounded-l-md focus:outline-none text-gray-800"
-                  />
-                  <button 
-                    type="submit" 
-                    className="bg-gray-900 text-white py-3 px-6 rounded-r-md hover:bg-gray-800 transition duration-300"
-                  >
-                    Subscribe
-                  </button>
-                </form>
-              </div>
-            </div>
+<div className="bg-orange-600 py-12 px-4 sm:px-6 lg:px-8">
+  <div className="max-w-5xl mx-auto">
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+      <div className="mb-6 md:mb-0">
+        <h3 className="text-white text-2xl font-bold">Stay updated with DigiDine!</h3>
+        <p className="text-orange-100 mt-2 text-lg">
+          Subscribe to our newsletter for exclusive offers and updates.
+        </p>
+      </div>
+      <div className="flex-1 md:ml-8 max-w-md">
+        <form className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
+            <input
+              type="email"
+              placeholder="Enter your email"
+              className="w-full py-3 px-4 rounded-md sm:rounded-r-none 
+                bg-white/10 border border-white/20
+                text-white placeholder-white/60
+                focus:outline-none focus:ring-2 focus:ring-white/50
+                transition duration-300"
+              required
+            />
           </div>
-        </div>
+          <button 
+            type="submit" 
+            className="w-full sm:w-auto bg-white text-orange-600 
+              font-semibold py-3 px-8 rounded-md sm:rounded-l-none
+              hover:bg-gray-100 active:bg-gray-200
+              transform hover:scale-[1.02] active:scale-[0.98]
+              transition duration-300"
+          >
+            Subscribe
+          </button>
+        </form>
+        <p className="text-orange-200/80 text-sm mt-2">
+          We respect your privacy. Unsubscribe at any time.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
         
         {/* Main footer content */}
         <motion.div 
