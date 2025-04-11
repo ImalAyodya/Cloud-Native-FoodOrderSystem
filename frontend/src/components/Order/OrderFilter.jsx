@@ -5,7 +5,7 @@ const OrderFilter = ({ selectedFilter, onFilterChange }) => {
   const filters = [
     { id: 'all', label: 'All Orders' },
     { id: 'pending', label: 'Pending' },
-    { id: 'processing', label: 'Processing' },
+    { id: 'preparing', label: 'preparing' },
     { id: 'delivered', label: 'Delivered' },
     { id: 'cancelled', label: 'Cancelled' }
   ];
