@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import Header from '../../components/Main/Header';
 import Footer from '../../components/Main/Footer';
 import HeroSection from '../../components/Main/HeroSection';
@@ -12,6 +12,11 @@ const Home = () => {
   const scrollToFeatured = () => {
     featuredRef.current.scrollIntoView({ behavior: 'smooth' });
   };
+
+  useEffect(() => {
+    // Set logged in user to localStorage
+    localStorage.setItem('loggedInUser', 'user12345');
+  }, []);
 
   const featuredDishes = [
     {

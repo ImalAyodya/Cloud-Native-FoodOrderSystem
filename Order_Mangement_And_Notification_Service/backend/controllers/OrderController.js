@@ -46,3 +46,31 @@ exports.deleteOrder = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+// Get orders by user ID
+exports.getOrdersByUserId = async (req, res) => {
+    try {
+        const loggedInUser = req.params.userId;
+        
+        const orders = await Order.find({ loggedInUser })
+            .sort({ placedAt: -1 }); // Sort by newest first
+
+        if (!orders || orders.length === 0) {
+            return res.status(404).json({ 
+                message: 'No orders found for this user' 
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            count: orders.length,
+            orders: orders
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            success: false,
+            error: 'Server Error',
+            message: error.message 
+        });
+    }
+};

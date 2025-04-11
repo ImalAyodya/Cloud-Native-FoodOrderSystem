@@ -1,25 +1,37 @@
-import React from 'react';
+
+          import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FaArrowRight } from 'react-icons/fa';
+import { FaArrowRight, FaShoppingCart } from 'react-icons/fa';
 
 const FeaturedDishesSection = ({ featuredDishes, fadeInUp, staggerContainer }) => {
   return (
     <section className="py-16 bg-gray-50">
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center mb-12">
-          <div>
-            <h2 className="text-3xl font-bold mb-2">Featured Dishes</h2>
-            <p className="text-gray-600">Discover our most popular dishes</p>
-          </div>
-          <Link
-            to="/menu"
-            className="flex items-center text-orange-500 font-medium hover:text-orange-600"
+      <motion.div 
+          className="text-center mb-12"
+          initial={{ opacity: 0, y: -20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <h2 className="text-3xl font-bold mb-4 relative inline-block">
+            Featured Dishes
+            <motion.span 
+              className="absolute -bottom-2 left-0 w-full h-1 bg-orange-500"
+              initial={{ width: 0 }}
+              whileInView={{ width: '100%' }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            />
+          </h2>
+          <motion.p 
+            className="text-gray-600 text-lg"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
           >
-            <span>View All</span>
-            <FaArrowRight className="ml-2" />
-          </Link>
-        </div>
+            Discover our most popular dishes
+          </motion.p>
+        </motion.div>
 
         <motion.div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
@@ -32,41 +44,38 @@ const FeaturedDishesSection = ({ featuredDishes, fadeInUp, staggerContainer }) =
             <motion.div
               key={dish.id}
               variants={fadeInUp}
-              className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition duration-300"
+              className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
+              whileHover={{ scale: 1.02 }}
             >
-              <div className="h-48 overflow-hidden">
-                <img
+              <div className="relative h-48 overflow-hidden">
+                <motion.img
                   src={dish.image}
                   alt={dish.name}
-                  className="w-full h-full object-cover transform hover:scale-110 transition duration-500"
+                  className="w-full h-full object-cover"
+                  whileHover={{ scale: 1.1 }}
+                  transition={{ duration: 0.6 }}
                 />
               </div>
               <div className="p-6">
-                <span className="text-xs font-semibold px-2 py-1 bg-gray-100 rounded-full text-gray-600">
+                <motion.span 
+                  className="text-xs font-semibold px-3 py-1 bg-orange-100 text-orange-600 rounded-full"
+                  whileHover={{ scale: 1.05 }}
+                >
                   {dish.category}
-                </span>
-                <h3 className="text-xl font-bold mt-2 mb-1">{dish.name}</h3>
-                <p className="text-gray-600 text-sm mb-4">{dish.description}</p>
+                </motion.span>
+                <h3 className="text-xl font-bold mt-3 mb-2">{dish.name}</h3>
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{dish.description}</p>
                 <div className="flex justify-between items-center">
-                  <span className="text-lg font-bold text-orange-500">
+                  <span className="text-xl font-bold text-orange-500">
                     ${dish.price.toFixed(2)}
                   </span>
-                  <button className="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-10 h-10 flex items-center justify-center transition duration-300">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <line x1="12" y1="5" x2="12" y2="19"></line>
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                  </button>
+                  <motion.button 
+                    className="bg-orange-500 hover:bg-orange-600 text-white rounded-full w-12 h-12 flex items-center justify-center group"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <FaShoppingCart className="transform group-hover:scale-110 transition-transform" />
+                  </motion.button>
                 </div>
               </div>
             </motion.div>
@@ -76,5 +85,4 @@ const FeaturedDishesSection = ({ featuredDishes, fadeInUp, staggerContainer }) =
     </section>
   );
 };
-
 export default FeaturedDishesSection;
