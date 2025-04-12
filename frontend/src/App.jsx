@@ -23,7 +23,7 @@ function App() {
 
         
         <Route path="/admin" element={<AdminLayout />}/>
-        <Route index element={<AdminDashboard />} />
+        
         <Route path="/order/dashboard" element={<AdminDashboard />} />
           
       </Routes>
