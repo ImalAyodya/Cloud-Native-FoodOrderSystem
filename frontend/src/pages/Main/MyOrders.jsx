@@ -1,3 +1,4 @@
+// All import statements remain unchanged
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ToastContainer } from 'react-toastify';
@@ -16,17 +17,17 @@ const MyOrders = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [animateCards, setAnimateCards] = useState(false);
+  const [localOrders, setLocalOrders] = useState([]);
 
-  // Trigger animation after initial load
   useEffect(() => {
     if (!loading && orders.length > 0) {
       setAnimateCards(true);
+      setLocalOrders(orders);
     }
   }, [loading, orders]);
 
   const handleFilterChange = (filter) => {
     setSelectedFilter(filter);
-    // Reset animation to create effect when changing filters
     setAnimateCards(false);
     setTimeout(() => setAnimateCards(true), 100);
   };
@@ -35,18 +36,28 @@ const MyOrders = () => {
     setSearchQuery(e.target.value);
   };
 
-  const filteredOrders = orders.filter(order => {
-    const matchesFilter = selectedFilter === 'all' || 
-                        order.orderStatus.toLowerCase() === selectedFilter;
-    
-    const matchesSearch = searchQuery === '' || 
-                        order.restaurantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        order.orderId.toLowerCase().includes(searchQuery.toLowerCase());
-    
+  const handleOrderStatusChange = (orderId, newStatus) => {
+    setLocalOrders(prevOrders =>
+      prevOrders.map(order =>
+        order.orderId === orderId
+          ? { ...order, orderStatus: newStatus }
+          : order
+      )
+    );
+  };
+
+  // ✅ FIXED FILTER LOGIC HERE:
+  const filteredOrders = localOrders.filter(order => {
+    const status = order.orderStatus?.toLowerCase() || '';
+    const matchesFilter = selectedFilter === 'all' || status === selectedFilter;
+
+    const matchesSearch = searchQuery === '' ||
+      order.restaurantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.orderId.toLowerCase().includes(searchQuery.toLowerCase());
+
     return matchesFilter && matchesSearch;
   });
 
-  // Loading skeletons
   const LoadingSkeleton = () => (
     <div className="space-y-6">
       {[1, 2, 3].map(i => (
@@ -70,7 +81,6 @@ const MyOrders = () => {
     </div>
   );
 
-  // Error display component
   const ErrorDisplay = ({ message }) => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -82,7 +92,7 @@ const MyOrders = () => {
       </div>
       <h3 className="text-lg font-bold text-red-800 mb-2">Unable to load orders</h3>
       <p className="text-red-600">{message}</p>
-      <button 
+      <button
         onClick={() => window.location.reload()}
         className="mt-4 px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
       >
@@ -94,9 +104,9 @@ const MyOrders = () => {
   return (
     <>
       <Header isNotHome={true} />
-      <div className="min-h-screen bg-gray-50 pt-28 pb-16">
+      <div className="min-h-screen bg-gray-50 pt-12 pb-16">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Header Panel */}
+
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -104,6 +114,7 @@ const MyOrders = () => {
             className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-8 p-8 text-white relative overflow-hidden"
           >
             <div className="absolute right-0 top-0 opacity-10">
+              {/* background SVG */}
               <svg width="200" height="200" viewBox="0 0 200 200" fill="none">
                 <path d="M190 10L10 190" stroke="white" strokeWidth="20" strokeLinecap="round" />
                 <path d="M140 10L10 140" stroke="white" strokeWidth="20" strokeLinecap="round" />
@@ -115,35 +126,31 @@ const MyOrders = () => {
             <div className="relative z-10">
               <h1 className="text-3xl font-bold mb-2">My Orders</h1>
               <p className="text-orange-100">Track and manage your food delivery orders</p>
-              
-              {/* Search bar */}
               <div className="mt-4 max-w-md relative">
                 <input
                   type="text"
                   placeholder="Search by restaurant or order ID..."
                   value={searchQuery}
                   onChange={handleSearch}
-                  className="w-full pl-10 pr-4 py-2 rounded-lg bg-white bg-opacity-20 placeholder-orange-100 text-white border border-orange-400 focus:outline-none focus:ring-2 focus:ring-white"
+                  className="w-full pl-10 pr-4 py-2 rounded-lg bg-white bg-opacity-10 backdrop-blur-sm placeholder-orange-50 text-white border border-white border-opacity-30 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent"
                 />
-                <FaSearch className="absolute left-3 top-3 text-orange-100" />
+                <FaSearch className="absolute left-3 top-3 text-white text-opacity-70" />
               </div>
             </div>
           </motion.div>
 
-          {/* Filter Section */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
             className="mb-8"
           >
-            <OrderFilter 
-              selectedFilter={selectedFilter} 
+            <OrderFilter
+              selectedFilter={selectedFilter}
               onFilterChange={handleFilterChange}
             />
           </motion.div>
 
-          {/* Content Section */}
           {loading ? (
             <LoadingSkeleton />
           ) : error ? (
@@ -151,7 +158,7 @@ const MyOrders = () => {
           ) : filteredOrders.length > 0 ? (
             <AnimatePresence>
               {animateCards && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="grid gap-6 mt-6"
@@ -174,6 +181,10 @@ const MyOrders = () => {
                           deliveryAddress: order.customer.address
                         }}
                         onViewDetails={() => setSelectedOrder(order)}
+                        onOrderStatusChange={handleOrderStatusChange}
+                        onDelete={(orderId) => {
+                          setLocalOrders(prevOrders => prevOrders.filter(o => o.orderId !== orderId));
+                        }}
                       />
                     </motion.div>
                   ))}
@@ -198,7 +209,6 @@ const MyOrders = () => {
         </div>
       </div>
 
-      {/* Order Details Modal */}
       {selectedOrder && (
         <OrderDetails
           order={{

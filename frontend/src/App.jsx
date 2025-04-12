@@ -6,6 +6,8 @@ import AboutUs from "./pages/Main/AboutUs";
 import ContactUs from "./pages/Main/ContactUs";
 import Cart from "./pages/Main/Cart";
 import MyOrders from "./pages/Main/MyOrders";
+import AdminDashboard from "./pages/Admin/Order/AdminDashboard";
+import AdminLayout from "./components/Admin/Order/AdminLayout";
 function App() {
  
 
@@ -18,6 +20,12 @@ function App() {
         <Route path="/contact" element={<ContactUs />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/myOrders" element={<MyOrders />} />
+
+        
+        <Route path="/admin" element={<AdminLayout />}/>
+        
+        <Route path="/order/dashboard" element={<AdminDashboard />} />
+          
       </Routes>
     </Router>
   );
