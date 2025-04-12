@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import {
   FaStore,
-  FaMotorcycle,
   FaClock,
   FaCheck,
   FaTimes,
@@ -12,13 +12,14 @@ import {
   FaTruck,
   FaUndo,
   FaExclamationTriangle,
-  FaReceipt
+  FaReceipt,
 } from 'react-icons/fa';
 
-const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrderStatusChange }) => {
+const OrderCard = ({ order, onViewDetails, onDelete, onReturn, onOrderStatusChange }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate(); // Use navigate for routing
 
   // Utility functions
   const getStatusColor = (status) => {
@@ -49,13 +50,13 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
     pending: <FaClock size={16} />,
     confirmed: <FaCheck size={16} />,
     preparing: <FaUtensils size={16} />,
-    "ready for pickup": <FaBoxOpen size={16} />,
-    "on the way": <FaTruck size={16} />,
+    'ready for pickup': <FaBoxOpen size={16} />,
+    'on the way': <FaTruck size={16} />,
     delivered: <FaCheck size={16} />,
     cancelled: <FaTimes size={16} />,
     failed: <FaExclamationTriangle size={16} />,
     refunded: <FaUndo size={16} />,
-    completed: <FaCheck size={16} />
+    completed: <FaCheck size={16} />,
   };
 
   const formatDate = (dateString) => {
@@ -92,7 +93,7 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
   const handleComplete = async () => {
     if (isLoading) return;
     setIsLoading(true);
-    
+
     try {
       const response = await fetch(`http://localhost:5001/api/orders/update-status/${order.id}`, {
         method: 'PUT',
@@ -101,14 +102,14 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
         },
         body: JSON.stringify({ newStatus: 'Completed' }),
       });
-  
+
       if (!response.ok) throw new Error('Failed to update order status');
-  
+
       const data = await response.json();
-      
+
       // Update local state first
       onOrderStatusChange && onOrderStatusChange(order.id, 'Completed');
-      
+
       // Show success message and close modal
       toast.success('Order marked as completed!');
       setShowCompleteConfirm(false);
@@ -119,7 +120,11 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
       setIsLoading(false);
     }
   };
-  
+
+  const handleUpdate = () => {
+    // Navigate to the update page with the order ID
+    navigate(`/orders/update/${order.id}`);
+  };
 
   const CompleteConfirmationModal = () => (
     <motion.div
@@ -159,10 +164,7 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
       </motion.div>
     </motion.div>
   );
-  
 
-
-  // Delete Confirmation Modal Component
   const DeleteConfirmationModal = () => (
     <motion.div
       initial={{ opacity: 0 }}
@@ -202,7 +204,6 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
     </motion.div>
   );
 
-  // Main Component Render
   return (
     <>
       <motion.div
@@ -213,11 +214,9 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
         transition={{ duration: 0.3 }}
         className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-300"
       >
-        {/* Status Bar */}
         <div className={`w-full h-1 ${getStatusColor(order.status).split(' ')[0].replace('bg-', 'bg-')}`}></div>
 
         <div className="p-6">
-          {/* Header Section */}
           <div className="flex justify-between items-start mb-4">
             <div className="flex gap-3">
               <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
@@ -234,7 +233,6 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
             </div>
           </div>
 
-          {/* Items Preview */}
           {order.items && (
             <div className="mt-4 mb-4">
               <div className="text-sm text-gray-500 flex items-center gap-2 mb-2">
@@ -242,19 +240,18 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
                 <span>{order.items.length} item{order.items.length !== 1 ? 's' : ''}</span>
               </div>
               <div className="space-y-1 text-gray-700">
-                {order.items.slice(0, 2).map((item, index) => (
-                  <p key={index} className="truncate text-sm">
-                    {item.quantity || 1}x {item.name}
-                  </p>
-                ))}
-                {order.items.length > 2 && (
-                  <p className="text-sm text-gray-500">+{order.items.length - 2} more</p>
-                )}
-              </div>
+  {order.items.slice(0, 2).map((item, index) => (
+    <p key={index} className="truncate text-sm">
+      {item.quantity || 1}x {item.size} {item.name}
+    </p>
+  ))}
+  {order.items.length > 2 && (
+    <p className="text-sm text-gray-500">+{order.items.length - 2} more</p>
+  )}
+</div>
             </div>
           )}
 
-          {/* Date and Action Section */}
           <div className="flex justify-between items-end mt-6">
             <div>
               <div className="flex items-center gap-1.5 text-gray-500 text-sm mb-1">
@@ -264,7 +261,6 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
               <p className="font-bold text-xl">${order.total.toFixed(2)}</p>
             </div>
             <div className="flex gap-2">
-              {/* Action Buttons */}
               {['cancelled', 'failed', 'completed', 'refunded'].includes(order.status.toLowerCase()) && (
                 <motion.button
                   whileHover={{ scale: 1.03 }}
@@ -281,7 +277,7 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
                 <motion.button
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
-                  onClick={onUpdate}
+                  onClick={handleUpdate} // Navigate to update page
                   className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors duration-300 font-medium text-sm shadow-sm"
                 >
                   Update
@@ -323,7 +319,6 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
         </div>
       </motion.div>
 
-      {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {showDeleteConfirm && <DeleteConfirmationModal />}
         {showCompleteConfirm && <CompleteConfirmationModal />}

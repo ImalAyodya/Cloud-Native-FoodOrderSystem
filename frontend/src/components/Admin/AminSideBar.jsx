@@ -77,9 +77,7 @@ const AdminSidebar = ({ user }) => {
       subMenu: [
         { name: 'Order Dashboard', path: '/order/dashboard' },
         { name: 'All Orders', path: '/admin/orders' },
-        { name: 'Pending', path: '/admin/orders?status=Pending' },
-        { name: 'Completed', path: '/admin/orders?status=Completed' },
-        { name: 'Cancelled', path: '/admin/orders?status=Cancelled' },
+        
       ]
     },
     { 

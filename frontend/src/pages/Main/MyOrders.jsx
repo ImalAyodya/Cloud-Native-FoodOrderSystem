@@ -23,6 +23,7 @@ const MyOrders = () => {
     if (!loading && orders.length > 0) {
       setAnimateCards(true);
       setLocalOrders(orders);
+      console.log('Orders fetched:', orders);
     }
   }, [loading, orders]);
 

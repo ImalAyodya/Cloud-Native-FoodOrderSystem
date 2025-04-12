@@ -78,17 +78,17 @@ const OrderDetails = ({ order, onClose }) => {
                 <h3 className="font-bold text-lg">Items</h3>
               </div>
               <div className="space-y-3">
-                {order.items.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-0">
-                    <div className="flex gap-4 items-center">
-                      <div className="w-10 h-10 bg-gray-200 rounded-md flex items-center justify-center">
-                        <span className="text-sm font-medium">{item.quantity}</span>
-                      </div>
-                      <span className="font-medium">{item.name}</span>
-                    </div>
-                    <span className="font-medium">${(item.price * item.quantity).toFixed(2)}</span>
+              {order.items.map((item) => (
+              <div key={item.id} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-0">
+                <div className="flex gap-4 items-center">
+                  <div className="w-10 h-10 bg-gray-200 rounded-md flex items-center justify-center">
+                    <span className="text-sm font-medium">{item.quantity}</span>
                   </div>
-                ))}
+                  <span className="font-medium">{item.size} {item.name}</span>
+                </div>
+                <span className="font-medium">${(item.price * item.quantity).toFixed(2)}</span>
+              </div>
+            ))}
               </div>
             </div>
 
@@ -118,6 +118,12 @@ const OrderDetails = ({ order, onClose }) => {
               </div>
               <p className="text-gray-600">{order.deliveryAddress}</p>
             </div>
+            {/* Payment Method */}
+            <div className="mt-4">
+                <p className="text-sm text-gray-600">
+                  Payment Method: <span className="font-medium text-gray-800">{order.paymentMethod}</span>
+                </p>
+              </div>
           </div>
 
           {/* Order Status Footer */}
@@ -151,6 +157,7 @@ const OrderDetails = ({ order, onClose }) => {
                   </p>
                 </div>
               )}
+              
             </motion.div>
           )}
         </motion.div>
