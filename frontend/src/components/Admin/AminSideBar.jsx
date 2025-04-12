@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
+  FaTruck,
   FaHome, 
   FaUtensils, 
   FaShoppingBag, 
@@ -133,15 +134,15 @@ const AdminSidebar = ({ user }) => {
         { name: 'Payment Methods', path: '/admin/payments/methods' },
       ]
     },
-    { 
-      name: 'Promotions', 
-      icon: <FaTags size={20} />, 
-      path: '/admin/promotions',
+    {
+      name: 'Delivery',
+      icon: <FaTruck size={20} />,
+      path: '/admin/delivery',
       badge: null,
       subMenu: [
-        { name: 'Discount Codes', path: '/admin/promotions/discount-codes' },
-        { name: 'Special Offers', path: '/admin/promotions/special-offers' },
-        { name: 'Loyalty Program', path: '/admin/promotions/loyalty' },
+        { name: 'Delivery Orders', path: '/admin/delivery/orders' },
+        { name: 'Drivers', path: '/admin/delivery/drivers' },
+        { name: 'Tracking', path: '/admin/delivery/tracking' },
       ]
     },
     { 
