@@ -10,6 +10,8 @@ import AdminDashboard from "./pages/Admin/Order/AdminDashboard";
 import AdminLayout from "./components/Admin/Order/AdminLayout";
 import AllOrders from "./pages/Admin/Order/AllOrders";
 import OrderUpdatePage from "./pages/Order/OrderUpdatePage";
+import Menu from "./pages/Main/Menu";
+import Checkout from "./pages/Main/CheckoutPage";
 
 function App() {
   return (
@@ -21,6 +23,8 @@ function App() {
         <Route path="/contact" element={<ContactUs />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/myOrders" element={<MyOrders />} />
+        <Route path="/menu" element={<Menu />} />
+        <Route path="/checkout" element={<Checkout />} />
 
         {/* Admin Pages */}
         <Route path="/admin" element={<AdminLayout />} />
