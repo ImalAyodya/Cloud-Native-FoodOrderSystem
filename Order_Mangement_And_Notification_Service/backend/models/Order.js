@@ -31,7 +31,8 @@ const OrderSchema = new mongoose.Schema({
             name: { type: String, required: true },
             price: { type: Number, required: true },
             quantity: { type: Number, required: true },
-            category: { type: String, required: true }
+            category: { type: String, required: true },
+            size: { type: String, required: true } // Added size field
         }
     ],
     orderNote: { type: String, default: '' }, // Optional note from customer

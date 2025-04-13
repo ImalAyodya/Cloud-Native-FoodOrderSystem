@@ -13,10 +13,17 @@ router.get('/', OrderController.getAllOrders);
 router.get('/:id', OrderController.getOrderById);
 //delete an order by ID
 //http://localhost:5001/api/orders/:id
-router.delete('/:id', OrderController.deleteOrder);
-
+router.delete('/:orderId', OrderController.deleteOrderById);
 
 //http://localhost:5001/api/orders/user/:userId
 router.get('/user/:userId', OrderController.getOrdersByUserId);
+
+// Route to update order items
+// http://localhost:5001/api/orders/:orderId/items
+router.put('/:orderId/items', OrderController.updateOrderItems);
+
+// Route to fetch order by orderId
+// http://localhost:5001/api/orders/orders/:orderId
+router.get('/orders/:orderId', OrderController.getOrderByOrderId);
 
 module.exports = router;
