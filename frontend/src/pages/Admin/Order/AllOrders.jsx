@@ -264,37 +264,37 @@ const AllOrders = () => {
     // navigate(`/admin/orders/${orderId}/edit`);
   };
 
-  // Handle delete order
-  const handleDeleteOrder = (orderId) => {
-    Swal.fire({
-      title: 'Are you sure?',
-      text: "You won't be able to revert this!",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Yes, delete it!'
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          // Mock deletion for now
-          // const response = await fetch(`http://localhost:5001/api/orders/${orderId}`, {
-          //   method: 'DELETE'
-          // });
-          
-          // if (!response.ok) {
-          //   throw new Error('Failed to delete order');
-          // }
-          
-          // Update local state
-          setOrders(orders.filter(order => order.orderId !== orderId));
-          toast.success(`Order ${orderId} deleted successfully`);
-        } catch (error) {
-          toast.error(`Failed to delete order: ${error.message}`);
+// Add this function to handle order deletion
+const handleDeleteOrder = async (orderId) => {
+  Swal.fire({
+    title: 'Are you sure?',
+    text: "You won't be able to revert this!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ef4444',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'Yes, delete it!',
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      try {
+        const response = await fetch(`http://localhost:5001/api/orders/${orderId}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete order');
         }
+
+        // Remove the deleted order from the local state
+        setOrders((prevOrders) => prevOrders.filter((order) => order.orderId !== orderId));
+        toast.success(`Order ${orderId} deleted successfully`);
+      } catch (error) {
+        console.error('Error deleting order:', error);
+        toast.error(`Failed to delete order: ${error.message}`);
       }
-    });
-  };
+    }
+  });
+};
 
   // Handle filter toggle
   const toggleFilter = () => {
@@ -749,7 +749,13 @@ const AllOrders = () => {
                             >
                               <FaEye size={16} />
                             </button>
-                            
+                            <button
+      onClick={() => handleDeleteOrder(order.orderId)} // Call the delete function
+      className="text-red-600 hover:text-red-800"
+      title="Delete Order"
+    >
+      <FaTrash size={16} />
+    </button>
                           </div>
                         </td>
                       </motion.tr>
