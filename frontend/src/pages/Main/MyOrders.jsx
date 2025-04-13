@@ -1,4 +1,3 @@
-// All import statements remain unchanged
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ToastContainer } from 'react-toastify';
@@ -12,6 +11,7 @@ import { useOrders } from '../../hooks/useOrders';
 import 'react-toastify/dist/ReactToastify.css';
 
 const MyOrders = () => {
+  // Existing state and hooks remain unchanged
   const { orders, loading, error } = useOrders();
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -19,6 +19,7 @@ const MyOrders = () => {
   const [animateCards, setAnimateCards] = useState(false);
   const [localOrders, setLocalOrders] = useState([]);
 
+  // Existing useEffect and handler functions remain unchanged
   useEffect(() => {
     if (!loading && orders.length > 0) {
       setAnimateCards(true);
@@ -47,7 +48,7 @@ const MyOrders = () => {
     );
   };
 
-  // ✅ FIXED FILTER LOGIC HERE:
+  // Filtering logic remains unchanged
   const filteredOrders = localOrders.filter(order => {
     const status = order.orderStatus?.toLowerCase() || '';
     const matchesFilter = selectedFilter === 'all' || status === selectedFilter;
@@ -59,6 +60,7 @@ const MyOrders = () => {
     return matchesFilter && matchesSearch;
   });
 
+  // Loading and error components remain unchanged
   const LoadingSkeleton = () => (
     <div className="space-y-6">
       {[1, 2, 3].map(i => (
@@ -104,42 +106,51 @@ const MyOrders = () => {
 
   return (
     <>
-      <Header isNotHome={true} />
-      <div className="min-h-screen bg-gray-50 pt-12 pb-16">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-8 p-8 text-white relative overflow-hidden"
-          >
-            <div className="absolute right-0 top-0 opacity-10">
-              {/* background SVG */}
-              <svg width="200" height="200" viewBox="0 0 200 200" fill="none">
-                <path d="M190 10L10 190" stroke="white" strokeWidth="20" strokeLinecap="round" />
-                <path d="M140 10L10 140" stroke="white" strokeWidth="20" strokeLinecap="round" />
-                <path d="M80 10L10 80" stroke="white" strokeWidth="20" strokeLinecap="round" />
-                <path d="M190 60L60 190" stroke="white" strokeWidth="20" strokeLinecap="round" />
-                <path d="M190 120L120 190" stroke="white" strokeWidth="20" strokeLinecap="round" />
-              </svg>
-            </div>
-            <div className="relative z-10">
-              <h1 className="text-3xl font-bold mb-2">My Orders</h1>
-              <p className="text-orange-100">Track and manage your food delivery orders</p>
-              <div className="mt-4 max-w-md relative">
+      <Header />
+      <div className="min-h-screen bg-gray-50">
+        {/* Updated Hero Section - matches ContactUs page */}
+        <section className="relative h-[300px] bg-orange-500">
+          <div className="absolute inset-0 bg-black/50"></div>
+          <div className="container mx-auto px-4 h-full flex items-center justify-center relative z-10">
+            <div className="text-center">
+              <motion.h1 
+                className="text-4xl md:text-5xl font-bold text-white mb-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                My Orders
+              </motion.h1>
+              <motion.p 
+                className="text-xl text-white/90 max-w-2xl mx-auto"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                Track and manage your food delivery orders
+              </motion.p>
+              
+              <motion.div 
+                className="mt-6 max-w-md mx-auto relative"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+              >
                 <input
                   type="text"
                   placeholder="Search by restaurant or order ID..."
                   value={searchQuery}
                   onChange={handleSearch}
-                  className="w-full pl-10 pr-4 py-2 rounded-lg bg-white bg-opacity-10 backdrop-blur-sm placeholder-orange-50 text-white border border-white border-opacity-30 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 rounded-lg bg-white/20 backdrop-blur-sm placeholder-white/70 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent"
                 />
-                <FaSearch className="absolute left-3 top-3 text-white text-opacity-70" />
-              </div>
+                <FaSearch className="absolute left-3 top-3.5 text-white text-opacity-70" />
+              </motion.div>
             </div>
-          </motion.div>
+          </div>
+        </section>
 
+        {/* Main Content Section */}
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
