@@ -8,10 +8,13 @@ export const useOrders = () => {
 
   const fetchOrders = async () => {
     try {
-      const userId = localStorage.getItem('loggedInUser');
-      if (!userId) {
+      const loggedInUser = localStorage.getItem('loggedInUser');
+      if (!loggedInUser) {
         throw new Error('User not logged in');
       }
+
+      const parsedUser = JSON.parse(loggedInUser); // Parse the JSON object
+      const userId = parsedUser.id; // Extract the user ID
 
       const response = await fetch(`http://localhost:5001/api/orders/user/${userId}`);
       const data = await response.json();

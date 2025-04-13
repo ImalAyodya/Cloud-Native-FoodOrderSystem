@@ -14,8 +14,12 @@ const Home = () => {
   };
 
   useEffect(() => {
-    // Set logged in user to localStorage
-    localStorage.setItem('loggedInUser', 'user12345');
+    // Set logged-in user to localStorage
+    const loggedInUser = {
+      id: 'user12345',
+      name: 'John Doe', // Replace with the actual user's name
+    };
+    localStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
   }, []);
 
   const featuredDishes = [
