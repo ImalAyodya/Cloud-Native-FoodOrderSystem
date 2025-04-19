@@ -12,6 +12,7 @@ import AllOrders from "./pages/Admin/Order/AllOrders";
 import OrderUpdatePage from "./pages/Order/OrderUpdatePage";
 import Menu from "./pages/Main/Menu";
 import Checkout from "./pages/Main/CheckoutPage";
+import Resturent from "./pages/Main/Resturent";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
         <Route path="/myOrders" element={<MyOrders />} />
         <Route path="/menu" element={<Menu />} />
         <Route path="/checkout" element={<Checkout />} />
+        <Route path="/resturents" element={<Resturent />} />
 
         {/* Admin Pages */}
         <Route path="/admin" element={<AdminLayout />} />
