@@ -1,31 +1,34 @@
 const express = require('express');
-const MenuItemRouter =express.Router();
-const auth = require('../middleware/auth');
+const MenuItemRouter = express.Router();
 const menuItemController = require('../controllers/menuItemController');
 
-// Menu Management
-MenuItemRouter.post(
-    '/add', 
-    auth, 
-    menuItemController.addMenuItem
-);
+// Basic CRUD Operations
+//http://localhost:5003/api/menu/add
+MenuItemRouter.post('/add', menuItemController.addMenuItem);
 
-MenuItemRouter.put(
-    '/update/:id', 
-    auth, 
-    menuItemController.updateMenuItem
-);
+//http://localhost:5003/api/menu/get
+MenuItemRouter.get('/get', menuItemController.getMenuItems);
 
-MenuItemRouter.delete(
-    '/delete/:id', 
-    auth, 
-    menuItemController.deleteMenuItem
-);
+//http://localhost:5003/api/menu/get/:id
+MenuItemRouter.get('/get/:id', menuItemController.getMenuItemById);
 
-MenuItemRouter.get(
-    '/get', 
-    auth, 
-    menuItemController.getMenuItems
-);
+//http://localhost:5003/api/menu/update/:id
+MenuItemRouter.put('/update/:id', menuItemController.updateMenuItem);
+
+//http://localhost:5003/api/menu/delete/:id
+MenuItemRouter.delete('/delete/:id', menuItemController.deleteMenuItem);
+
+// Specialized Operations
+//http://localhost:5003/api/menu/setAvailability
+MenuItemRouter.put('/setAvailability', menuItemController.setAvailability);
+
+//http://localhost:5003/api/menu/setFeatured
+MenuItemRouter.put('/setFeatured', menuItemController.setFeatured);
+
+//http://localhost:5003/api/menu/featured
+MenuItemRouter.get('/featured', menuItemController.getFeaturedItems);
+
+//http://localhost:5003/api/menu/batch
+MenuItemRouter.put('/batch', menuItemController.batchUpdate);
 
 module.exports = MenuItemRouter;
