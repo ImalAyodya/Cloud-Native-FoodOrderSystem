@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const MenuItem = require('../models/MenuItem');
 const Restaurant = require('../models/Restaurant');
 
@@ -345,6 +346,52 @@ const batchUpdate = async (req, res) => {
   }
 };
 
+const getMenuItemsByRestaurant = async (req, res) => {
+  try {
+    const { restaurantId } = req.params;
+
+    // Validate restaurantId format
+    if (!mongoose.Types.ObjectId.isValid(restaurantId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid restaurant ID format',
+      });
+    }
+
+    // Query parameters for filtering
+    const { category, isAvailable, featured, search } = req.query;
+
+    // Build query object
+    const query = { restaurantId };
+
+    if (category) query.category = category;
+    if (isAvailable === 'true') query.isAvailable = true;
+    if (isAvailable === 'false') query.isAvailable = false;
+    if (featured === 'true') query.featured = true;
+
+    // Add text search if provided
+    if (search) {
+      query.$text = { $search: search };
+    }
+
+    // Fetch menu items
+    const menuItems = await MenuItem.find(query).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: menuItems.length,
+      data: menuItems,
+    });
+  } catch (error) {
+    console.error('Error fetching menu items:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching menu items',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   addMenuItem,
   getMenuItems,
@@ -354,5 +401,6 @@ module.exports = {
   setAvailability,
   setFeatured,
   getFeaturedItems,
-  batchUpdate
+  batchUpdate,
+  getMenuItemsByRestaurant
 };

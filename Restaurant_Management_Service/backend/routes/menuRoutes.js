@@ -31,4 +31,6 @@ MenuItemRouter.get('/featured', menuItemController.getFeaturedItems);
 //http://localhost:5003/api/menu/batch
 MenuItemRouter.put('/batch', menuItemController.batchUpdate);
 
+//http://localhost:5003/api/menu/:restaurantId
+MenuItemRouter.get('/:restaurantId/menu', menuItemController.getMenuItemsByRestaurant);
 module.exports = MenuItemRouter;
