@@ -1,116 +1,156 @@
-// const Restaurant = require('../models/Restaurant');
-// const mongoose = require("mongoose");
-
-// // Set restaurant availability
-// exports.setAvailability = async (req, res) => {
-//   try {
-//     const { isAvailable } = req.body;
-//     if (typeof isAvailable !== 'boolean') {
-//       return res.status(400).json({ error: 'isAvailable must be a boolean' });
-//     }
-//     const restaurant = await Restaurant.findByIdAndUpdate(
-//       req.user.restaurantId,
-//       { isAvailable },
-//       { new: true }
-//     );
-//     if (!restaurant) {
-//       return res.status(404).json({ error: 'Restaurant not found' });
-//     }
-//     res.json({ message: 'Availability updated', isAvailable: restaurant.isAvailable });
-//   } catch (error) {
-//     console.error('Set availability error:', error.message);
-//     res.status(500).json({ error: 'Server error' });
-//   }
-// };
-
-// // Get restaurant availability
-// exports.getAvailability = async (req, res) => {
-//   try {
-//     const restaurant = await Restaurant.findById(req.user.restaurantId);
-//     if (!restaurant) {
-//       return res.status(404).json({ error: 'Restaurant not found' });
-//     }
-//     res.json({ isAvailable: restaurant.isAvailable });
-//   } catch (error) {
-//     console.error('Get availability error:', error.message);
-//     res.status(500).json({ error: 'Server error' });
-//   }
-// };
-
-
 const Restaurant = require('../models/Restaurant');
 
-exports.addRestaurant = async (req, res) => {
+// Create new restaurant
+const addRestaurant = async (req, res) => {
   try {
-    if (req.user.role !== 'restaurant_admin') {
-      return res.status(403).json({ error: 'Access denied: Restaurant Admin role required' });
-    }
-
-    const { name, address } = req.body;
-    if (!name || !address) {
-      return res.status(400).json({ error: 'Name and address are required' });
-    }
-
-    const restaurant = new Restaurant({
-      name,
-      address,
-      ownerId: req.user._id,
-      isAvailable: true
+    // Remove dependency on req.user.id
+    const newRestaurant = new Restaurant({
+      ...req.body
+      // ownerId should now be provided in the request body
     });
-    await restaurant.save();
-
-    // Update user's restaurantId
-    req.user.restaurantId = restaurant._id;
-    await req.user.save();
-
-    res.status(201).json({ message: 'Restaurant added', restaurant });
+    
+    const restaurant = await newRestaurant.save();
+    res.status(201).json({ success: true, restaurant });
   } catch (error) {
-    console.error('Add restaurant error:', error.message);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Get all restaurants (with optional filters)
+const getRestaurants = async (req, res) => {
+  try {
+    const { cuisine, city, isAvailable, priceRange, name } = req.query;
+    const filter = {};
+    
+    if (cuisine) filter.cuisine = { $in: cuisine.split(',') };
+    if (city) filter['location.city'] = city;
+    if (isAvailable) filter.isAvailable = isAvailable === 'true';
+    if (priceRange) filter.priceRange = priceRange;
+    if (name) filter.name = { $regex: name, $options: 'i' };
+    
+    const restaurants = await Restaurant.find(filter)
+      .select('name description address location.city cuisine images rating priceRange isAvailable');
+    
+    res.status(200).json({ success: true, count: restaurants.length, restaurants });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Get restaurant by ID
+const getRestaurantById = async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findById(req.params.id)
+      .populate('menuItems');
+      
+    if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found' });
+    
+    res.status(200).json({ success: true, restaurant });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Update restaurant
+const updateRestaurant = async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findById(req.params.id);
+    
+    if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found' });
+    if (restaurant.ownerId.toString() !== req.user.id && req.user.role !== 'admin') 
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    
+    const updatedRestaurant = await Restaurant.findByIdAndUpdate(
+      req.params.id, 
+      { $set: req.body }, 
+      { new: true }
+    );
+    
+    res.status(200).json({ success: true, restaurant: updatedRestaurant });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // Set restaurant availability
-exports.setAvailability = async (req, res) => {
+const setAvailability = async (req, res) => {
   try {
-    if (req.user.role !== 'restaurant_admin') {
-      return res.status(403).json({ error: 'Access denied: Restaurant Admin role required' });
-    }
-
     const { isAvailable } = req.body;
-    if (typeof isAvailable !== 'boolean') {
-      return res.status(400).json({ error: 'isAvailable must be a boolean' });
-    }
-
-    const restaurant = await Restaurant.findByIdAndUpdate(
-      req.user.restaurantId,
-      { isAvailable },
+    const restaurant = await Restaurant.findOneAndUpdate(
+      { ownerId: req.user.id },
+      { $set: { isAvailable } },
       { new: true }
     );
-    if (!restaurant) {
-      return res.status(404).json({ error: 'Restaurant not found' });
-    }
-    res.json({ message: 'Availability updated', isAvailable: restaurant.isAvailable });
+    
+    if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found' });
+    
+    res.status(200).json({ success: true, isAvailable: restaurant.isAvailable });
   } catch (error) {
-    console.error('Set availability error:', error.message);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // Get restaurant availability
-exports.getAvailability = async (req, res) => {
+const getAvailability = async (req, res) => {
   try {
-    if (req.user.role !== 'restaurant_admin') {
-      return res.status(403).json({ error: 'Access denied: Restaurant Admin role required' });
-    }
-
-    const restaurant = await Restaurant.findById(req.user.restaurantId);
-    if (!restaurant) {
-      return res.status(404).json({ error: 'Restaurant not found' });
-    }
-    res.json({ isAvailable: restaurant.isAvailable });
+    const { restaurantId } = req.query;
+    const filter = restaurantId ? { _id: restaurantId } : { ownerId: req.user.id };
+    
+    const restaurant = await Restaurant.findOne(filter).select('name isAvailable');
+    if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found' });
+    
+    res.status(200).json({ success: true, name: restaurant.name, isAvailable: restaurant.isAvailable });
   } catch (error) {
-    console.error('Get availability error:', error.message);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ success: false, message: error.message });
   }
+};
+
+// Delete restaurant
+const deleteRestaurant = async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findById(req.params.id);
+    
+    if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found' });
+    if (restaurant.ownerId.toString() !== req.user.id && req.user.role !== 'admin') 
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+      
+    await Restaurant.findByIdAndDelete(req.params.id);
+    res.status(200).json({ success: true, message: 'Restaurant deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Find nearby restaurants
+const getNearbyRestaurants = async (req, res) => {
+  try {
+    const { lng, lat, maxDistance = 5000 } = req.query; // maxDistance in meters
+    
+    if (!lng || !lat) return res.status(400).json({ success: false, message: 'Location coordinates required' });
+    
+    const restaurants = await Restaurant.find({
+      location: {
+        $near: {
+          $geometry: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
+          $maxDistance: parseInt(maxDistance)
+        }
+      },
+      isAvailable: true
+    }).select('name address location images rating deliveryFee');
+    
+    res.status(200).json({ success: true, count: restaurants.length, restaurants });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = {
+  addRestaurant,
+  getRestaurants,
+  getRestaurantById,
+  updateRestaurant,
+  setAvailability,
+  getAvailability,
+  deleteRestaurant,
+  getNearbyRestaurants
 };
