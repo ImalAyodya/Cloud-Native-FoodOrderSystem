@@ -13,12 +13,14 @@ import OrderUpdatePage from "./pages/Order/OrderUpdatePage";
 import Menu from "./pages/Main/Menu";
 import Checkout from "./pages/Main/CheckoutPage";
 import Resturent from "./pages/Main/Resturent";
+import LoginPage from "./pages/Main/Login";
 
 function App() {
   return (
     <Router>
       <Routes>
         {/* Main Pages */}
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<AboutUs />} />
         <Route path="/contact" element={<ContactUs />} />
