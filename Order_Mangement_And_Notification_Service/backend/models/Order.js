@@ -52,13 +52,26 @@ const OrderSchema = new mongoose.Schema({
             'Delivered', 'Cancelled', 'Failed', 'Refunded', 'Completed'
         ], 
         default: 'Pending' 
-    },  
+    },
+    
+    // Add cancellation details
+    cancellation: {
+        reason: { type: String },
+        cancelledBy: { 
+            type: String, 
+            enum: ['customer', 'restaurant', 'system'], 
+        },
+        additionalInfo: { type: String },
+        timestamp: { type: Date }
+    },
+    
     statusTimestamps: {
         type: Map,
         of: Date,
         default: {}
     },
-      placedAt: { type: Date, default: Date.now }
+    
+    placedAt: { type: Date, default: Date.now }
 });
 
 // Middleware to update status timestamps on save
@@ -67,14 +80,34 @@ OrderSchema.pre('save', function (next) {
         this.statusTimestamps = {};
     }
     this.statusTimestamps.set(this.orderStatus, new Date());
+    
+    // Add cancellation timestamp logic
+    if (this.orderStatus === 'Cancelled' && !this.cancellation.timestamp) {
+        this.cancellation.timestamp = new Date();
+    }
+    
     next();
 });
 
 // Middleware to update status timestamps on findOneAndUpdate
 OrderSchema.pre('findOneAndUpdate', async function (next) {
     const update = this.getUpdate();
+    
+    // If updating to cancelled status
+    if (update.orderStatus === 'Cancelled') {
+        // Ensure the cancellation object exists in the update
+        if (!update.cancellation) {
+            update.cancellation = {};
+        }
+        
+        // Set cancellation timestamp if not provided
+        if (!update.cancellation.timestamp) {
+            update.cancellation.timestamp = new Date();
+        }
+    }
+    
+    // Continue with existing timestamp logic
     if (update.orderStatus) {
-        // Add the new status timestamp to the statusTimestamps map
         const order = await this.model.findOne(this.getQuery());
         if (order) {
             const statusTimestamps = order.statusTimestamps || new Map();
@@ -83,6 +116,7 @@ OrderSchema.pre('findOneAndUpdate', async function (next) {
             this.setUpdate(update);
         }
     }
+    
     next();
 });
 
