@@ -1,6 +1,5 @@
 const express = require('express');
 const RestaurantRouter = express.Router();
-const auth = require('../middleware/auth');
 const restaurantController = require('../controllers/restaurantController');
 
 // Restaurant CRUD operations

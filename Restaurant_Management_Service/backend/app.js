@@ -22,8 +22,6 @@ app.use('/api/menu', MenuItemRouter);
 
 app.use('/api/restaurant', RestaurantRouter);
 
-//app.use('/api/users', userRouter);
-
 const PORT = process.env.PORT || 5003;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
