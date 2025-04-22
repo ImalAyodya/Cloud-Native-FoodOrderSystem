@@ -7,6 +7,8 @@ const passport = require('passport');
 const nodemailer = require('nodemailer');
 const authRoutes = require('./routes/authRoutes');
 require('./config/passportConfig');  //Import Passport configuration
+const paymentRoutes = require("./routes/paymentRoutes");
+const orderRoutes = require('./routes/orderRoutes');
 
 dotenv.config();
 
@@ -32,7 +34,13 @@ mongoose.connect(process.env.MONGO_URI, {
 });
 
 // Routes
+//Auth route
 app.use('/api/auth', authRoutes);
+//Payment route
+app.use("/api/payments", paymentRoutes);
+//Order route for checking loyality function
+app.use('/api/orders', orderRoutes);
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
