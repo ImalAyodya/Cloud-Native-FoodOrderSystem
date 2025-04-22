@@ -16,9 +16,9 @@ const OrderSchema = new mongoose.Schema({
             return `DGD-${year}${month}${day}-${random}`;
         }
     },
-    //restaurant: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant', required: true }, // Link to restaurant
+    restaurant: { type: String ,required: true }, // Link to restaurant
     restaurantName: { type: String, required: true },
-    //loggedInUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Link to logged-in user
+    loggedInUser: { type: String, required: true }, // Link to logged-in user
     loggedInUserName: { type: String, required: true },
     customer: {
         name: { type: String, required: true },

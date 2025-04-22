@@ -32,27 +32,56 @@ const Footer = () => {
     <footer className="bg-gray-900 text-gray-300">
       <div className="max-w-7xl mx-auto">
         {/* Top section with newsletter */}
-        <div className="bg-orange-600 py-10 px-4 sm:px-6 lg:px-8">
+
+        <div className="bg-gradient-to-r from-orange-600 to-orange-500 py-12 px-4 sm:px-6 lg:px-8 shadow-lg ">
           <div className="max-w-5xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
               <div className="mb-6 md:mb-0">
-                <h3 className="text-white text-xl font-bold">Stay updated with DigiDine!</h3>
-                <p className="text-orange-100 mt-2">Subscribe to our newsletter for exclusive offers and updates.</p>
+                <h3 className="text-white text-2xl font-bold flex items-center">
+                  <svg className="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                  </svg>
+                  Stay updated with DigiDine!
+                </h3>
+                <p className="text-orange-50 mt-2 text-lg">
+                  Subscribe to our newsletter for exclusive offers and updates.
+                </p>
               </div>
-              <div className="flex-1 md:ml-6 max-w-md">
-                <form className="flex">
-                  <input
-                    type="email"
-                    placeholder="Your email address"
-                    className="flex-1 py-3 px-4 rounded-l-md focus:outline-none text-gray-800"
-                  />
-                  <button 
-                    type="submit" 
-                    className="bg-gray-900 text-white py-3 px-6 rounded-r-md hover:bg-gray-800 transition duration-300"
+              <div className="flex-1 md:ml-8 max-w-md">
+                <form className="flex flex-col sm:flex-row gap-3 relative">
+                  <div className="flex-1 relative">
+                    <input
+                      type="email"
+                      placeholder="Enter your email"
+                      className="w-full py-3 px-4 rounded-lg sm:rounded-r-none
+                        bg-white/10 border border-white/30
+                        text-white placeholder-white/60
+                        focus:outline-none focus:ring-2 focus:ring-white/50
+                        transition duration-300"
+                      required
+                      aria-label="Email address"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full sm:w-auto bg-white text-orange-600
+                      font-semibold py-3 px-8 rounded-lg sm:rounded-l-none
+                      hover:bg-gray-100 active:bg-gray-200
+                      transform hover:scale-[1.02] active:scale-[0.98]
+                      transition duration-300 shadow-md"
                   >
                     Subscribe
                   </button>
                 </form>
+                <div className="flex items-center mt-3">
+                  <svg className="w-4 h-4 text-orange-200/80 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-orange-200/80 text-sm">
+                    We respect your privacy. Unsubscribe at any time.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
