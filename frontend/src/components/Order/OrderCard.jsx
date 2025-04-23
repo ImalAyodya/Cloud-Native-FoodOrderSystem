@@ -75,7 +75,8 @@ const OrderCard = ({ order, onViewDetails, onDelete, onReturn, onOrderStatusChan
   const handleDelete = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`http://localhost:5001/api/orders/${order.id}`, {
+      // Update this URL to include 'orders/' before the order ID
+      const response = await fetch(`http://localhost:5001/api/orders/orders/${order.id}`, {
         method: 'DELETE',
       });
 
