@@ -137,3 +137,5 @@ dist
 .qodo
 .vite/
 .vite/deps
+frontend/.vite/deps/package.json
+frontend/.vite/deps/_metadata.json
