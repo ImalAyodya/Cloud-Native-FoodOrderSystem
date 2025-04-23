@@ -1,11 +1,18 @@
 const Order = require('../models/Order');
 const nodemailer = require('nodemailer');
+const twilio = require('twilio');
 
 // Create a new order
 exports.createOrder = async (req, res) => {
     try {
         const order = new Order(req.body);
         await order.save();
+
+        // Initialize Twilio client
+        const accountSid = process.env.TWILIO_ACCOUNT_SID;
+        const authToken = process.env.TWILIO_AUTH_TOKEN;
+        const client = twilio(accountSid, authToken);
+        const whatsappNumber = process.env.TWILIO_WHATSAPP_PHONE_NUMBER;
 
         // Send email to the customer
         const transporter = nodemailer.createTransport({
@@ -155,13 +162,82 @@ exports.createOrder = async (req, res) => {
         // Send the email
         await transporter.sendMail(mailOptions);
 
+        // Prepare WhatsApp message content
+        // Create a simplified item list for WhatsApp
+        const itemList = order.items.map(item => 
+            `• ${item.name} (${item.size}) x${item.quantity} - $${(item.price * item.quantity).toFixed(2)}`
+        ).join('\n');
+        
+        // Format WhatsApp message
+        const whatsappMessage = `
+🍽️ *DigiDine Order Confirmation* 🍽️
+
+Hello ${order.customer.name}! Your order from *${order.restaurantName}* has been confirmed.
+
+*Order #:* ${order.orderId}
+*Estimated Delivery:* 30-45 minutes
+
+*Your Order:*
+${itemList}
+
+*Total:* $${order.totalAmount.toFixed(2)}
+
+Track your order here: https://digidine.com/track-order/${order.orderId}
+
+Thank you for choosing DigiDine! 🙏
+        `;
+
+        // Only send WhatsApp message if customer phone is provided
+        if (order.customer.phone) {
+            try {
+                // Format customer phone for WhatsApp
+                
+                // First, remove any spaces, dashes, parentheses, or other non-digit characters
+                let cleanPhone = order.customer.phone.replace(/\D/g, '');
+                
+                // Handle Sri Lankan phone number formats
+                // If number starts with 0, replace with +94
+                if (cleanPhone.startsWith('0')) {
+                    cleanPhone = '+94' + cleanPhone.substring(1);
+                } 
+                // If number doesn't start with + but has 9 digits (without country code)
+                else if (!cleanPhone.startsWith('+') && cleanPhone.length === 9) {
+                    cleanPhone = '+94' + cleanPhone;
+                }
+                // If number already has country code but missing +
+                else if (cleanPhone.startsWith('94') && cleanPhone.length === 11) {
+                    cleanPhone = '+' + cleanPhone;
+                }
+                // If number doesn't have country code or + (just the number without the leading 0)
+                else if (!cleanPhone.startsWith('+') && !cleanPhone.startsWith('94') && cleanPhone.length < 11) {
+                    cleanPhone = '+94' + cleanPhone;
+                }
+                // If not matching any pattern, assume it's already correctly formatted or needs manual check
+                
+                console.log(`Original phone: ${order.customer.phone}, Formatted phone: ${cleanPhone}`);
+                console.log(`Sending WhatsApp to: whatsapp:${cleanPhone}`);
+                
+                // Send WhatsApp message
+                await client.messages.create({
+                    body: whatsappMessage,
+                    from: `whatsapp:${whatsappNumber}`,
+                    to: `whatsapp:${cleanPhone}`
+                });
+                
+                console.log('WhatsApp message sent successfully');
+            } catch (whatsappError) {
+                console.error('Error sending WhatsApp message:', whatsappError);
+                // Continue execution even if WhatsApp message fails
+            }
+        }
+
         res.status(201).json({
             success: true,
-            message: 'Order created successfully and confirmation email sent',
+            message: 'Order created successfully and confirmations sent',
             order,
         });
     } catch (error) {
-        console.error('Error creating order or sending email:', error);
+        console.error('Error creating order or sending notifications:', error);
         res.status(400).json({ 
             success: false,
             error: error.message 
