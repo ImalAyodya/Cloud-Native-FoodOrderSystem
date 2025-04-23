@@ -48,6 +48,42 @@ const MyOrders = () => {
     );
   };
 
+  // UPDATED: Handle view details function to properly format the order data
+  const handleViewDetails = (order) => {
+    const formattedOrder = {
+      id: order.orderId || 'N/A',
+      orderId: order.orderId || 'N/A',
+      orderStatus: order.orderStatus || 'Pending',
+      statusTimestamps: order.statusTimestamps || {},
+      items: Array.isArray(order.items) ? order.items.map((item, index) => ({
+        id: item._id || index,
+        name: item.name || 'Unknown Item',
+        price: item.price || 0,
+        quantity: item.quantity || 1,
+        category: item.category || 'N/A',
+        size: item.size || 'N/A'
+      })) : [],
+      total: order.totalAmount || 0,
+      totalAmount: order.totalAmount || 0,
+      deliveryAddress: order.customer?.address || 'No address provided',
+      customer: order.customer || { name: 'N/A', email: 'N/A', phone: 'N/A' },
+      restaurant: order.restaurant || 'N/A',
+      restaurantName: order.restaurantName || 'N/A',
+      paymentMethod: order.paymentMethod || 'N/A',
+      paymentStatus: order.paymentStatus || 'N/A',
+      paymentTransactionId: order.paymentTransactionId || '',
+      placedAt: order.placedAt || null,
+      date: order.placedAt || null,
+      orderNote: order.orderNote || '',
+      promoCode: order.promoCode || '',
+      discount: order.discount || 0,
+      loggedInUserName: order.loggedInUserName || '',
+      cancellation: order.cancellation || null
+    };
+  
+    setSelectedOrder(formattedOrder);
+  };
+
   // Filtering logic remains unchanged
   const filteredOrders = localOrders.filter(order => {
     const status = order.orderStatus?.toLowerCase() || '';
@@ -108,7 +144,7 @@ const MyOrders = () => {
     <>
       <Header />
       <div className="min-h-screen bg-gray-50">
-        {/* Updated Hero Section - matches ContactUs page */}
+        {/* Hero Section - unchanged */}
         <section className="relative h-[300px] bg-orange-500">
           <div className="absolute inset-0 bg-black/50"></div>
           <div className="container mx-auto px-4 h-full flex items-center justify-center relative z-10">
@@ -190,9 +226,9 @@ const MyOrders = () => {
                           date: order.placedAt,
                           total: order.totalAmount,
                           items: order.items,
-                          deliveryAddress: order.customer.address
+                          deliveryAddress: order.customer?.address
                         }}
-                        onViewDetails={() => setSelectedOrder(order)}
+                        onViewDetails={() => handleViewDetails(order)} // Use the new handleViewDetails function
                         onOrderStatusChange={handleOrderStatusChange}
                         onDelete={(orderId) => {
                           setLocalOrders(prevOrders => prevOrders.filter(o => o.orderId !== orderId));
@@ -221,20 +257,10 @@ const MyOrders = () => {
         </div>
       </div>
 
+      {/* UPDATED: Simply pass the selectedOrder to OrderDetails component */}
       {selectedOrder && (
         <OrderDetails
-          order={{
-            id: selectedOrder.orderId,
-            items: selectedOrder.items,
-            total: selectedOrder.totalAmount,
-            deliveryAddress: selectedOrder.customer.address,
-            orderStatus: selectedOrder.orderStatus,
-            statusTimestamps: selectedOrder.statusTimestamps || {},
-            restaurant: selectedOrder.restaurantName,
-            customer: selectedOrder.customer,
-            paymentMethod: selectedOrder.paymentMethod,
-            orderNote: selectedOrder.orderNote
-          }}
+          order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
         />
       )}
