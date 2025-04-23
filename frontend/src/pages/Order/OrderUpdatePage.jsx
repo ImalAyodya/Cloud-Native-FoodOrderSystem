@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import OrderItemsList from '../../components/Order/UpdateOrder/OrderItemsList';
 import AddItemsModal from '../../components/Order/UpdateOrder/AddItemsModal';
 import PaymentSection from '../../components/Order/UpdateOrder/PaymentSection';
+import CancelOrderModal from '../../components/Order/CancelOrder';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -13,10 +14,23 @@ const OrderUpdatePage = () => {
   const [order, setOrder] = useState(null);
   const [originalItems, setOriginalItems] = useState([]);
   const [newlyAddedItems, setNewlyAddedItems] = useState([]);
-  const [restaurantFoods, setRestaurantFoods] = useState([]);
+  const [removedOriginalItems, setRemovedOriginalItems] = useState([]);
   const [restaurantName, setRestaurantName] = useState('');
+  const [restaurantId, setRestaurantId] = useState('');
   const [showAddItemsModal, setShowAddItemsModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [showCancelReasonModal, setShowCancelReasonModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+
+  // Create a persistent reference to track original item IDs
+  const originalItemIds = React.useMemo(() => {
+    return originalItems.map(item => ({
+      id: item._id,
+      size: item.size,
+      key: `${item._id}-${item.size}`
+    }));
+  }, [originalItems]);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -26,13 +40,15 @@ const OrderUpdatePage = () => {
         const data = await response.json();
         setOrder(data.order);
         setOriginalItems(data.order.items);
-
-        const restaurantResponse = await fetch(
-          `http://localhost:5001/api/restaurants/foods/${data.order.restaurant}`
-        );
-        const restaurantData = await restaurantResponse.json();
-        setRestaurantFoods(restaurantData.foods);
-        setRestaurantName(restaurantData.restaurantName);
+        
+        // Store restaurant ID from the order
+        const restaurantId = data.order.restaurant;
+        setRestaurantId(restaurantId);
+        
+        // Set restaurant name from order data if available
+        if (data.order.restaurantName) {
+          setRestaurantName(data.order.restaurantName);
+        }
       } catch (error) {
         toast.error('Failed to load order details', {
           autoClose: 5000,
@@ -55,34 +71,29 @@ const OrderUpdatePage = () => {
   const calculateTotal = (items) =>
     items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const mergedItems = [...originalItems];
-
-  // Add or merge newlyAddedItems to mergedItems - considering both name AND size
-  newlyAddedItems.forEach((newItem) => {
-    // Find matching item by both name and size
-    const existingIndex = mergedItems.findIndex(
-      (item) => item.name === newItem.name && item.size === newItem.size
-    );
+  const mergedItems = [
+    // First include all original items unchanged
+    ...originalItems,
     
-    if (existingIndex !== -1) {
-      mergedItems[existingIndex].quantity += newItem.quantity;
-    } else {
-      mergedItems.push(newItem);
-    }
-  });
+    // Then add all newly added items separately without merging with original items
+    ...newlyAddedItems
+  ];
 
   const handleAddItem = (item) => {
     setNewlyAddedItems((prev) => {
-      // Find existing item with same name AND size
-      const exists = prev.find(
-        (i) => i.name === item.name && i.size === item.size
+      // Create a unique identifier for the item
+      const itemKey = `${item._id}-${item.size}`;
+      
+      // Find existing item in newly added items only
+      const existingItemIndex = prev.findIndex(
+        (i) => `${i._id}-${i.size}` === itemKey
       );
       
-      if (exists) {
+      if (existingItemIndex !== -1) {
         // Update quantity if item exists
-        return prev.map((i) =>
-          (i.name === item.name && i.size === item.size) 
-            ? { ...i, quantity: i.quantity + 1 } 
+        return prev.map((i, index) =>
+          index === existingItemIndex
+            ? { ...i, quantity: i.quantity + 1 }
             : i
         );
       } else {
@@ -91,32 +102,56 @@ const OrderUpdatePage = () => {
       }
     });
     
-    toast.success(`${item.name} (${item.size}) added to the order!`, {
-      autoClose: 3000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-    });
+    // Do NOT call toast.success here - let the AddItemsModal handle the notification
+    // This prevents duplicate notifications
   };
 
-  const handleRemoveItem = (itemName) => {
+  const handleRemoveItem = (itemId) => {
     // Check if the item is in the original items
-    const isOriginalItem = originalItems.some((item) => item.name === itemName);
+    const isOriginalItem = originalItemIds.some(item => item.key === itemId);
+    
     if (isOriginalItem) {
-      toast.warning('You cannot remove items that are already in the order!', {
+      // Check payment method to determine if original items can be removed
+      if (order.paymentMethod === 'Cash on delivery') {
+        // Find the item in original items
+        const itemToRemove = originalItems.find(item => `${item._id}-${item.size}` === itemId);
+        
+        if (itemToRemove) {
+          // Add to removed original items
+          setRemovedOriginalItems(prev => [...prev, itemToRemove]);
+          
+          // Remove from displayed original items
+          setOriginalItems(prev => prev.filter(item => `${item._id}-${item.size}` !== itemId));
+          
+          toast.info('Original item removed from order', {
+            autoClose: 3000,
+            closeOnClick: true,
+          });
+        }
+      } else {
+        // For non-cash payment methods, don't allow removing original items
+        toast.warning('You cannot remove original items when paying with ' + order.paymentMethod, {
+          autoClose: 3000,
+          closeOnClick: true,
+        });
+        return;
+      }
+    } else {
+      // For newly added items, always allow removal regardless of payment method
+      setNewlyAddedItems((prev) => prev.filter((item) => {
+        const newItemId = item._id ? `${item._id}-${item.size}` : item.name;
+        return newItemId !== itemId;
+      }));
+      
+      toast.info('Item removed from the order', {
         autoClose: 3000,
         closeOnClick: true,
       });
-      return;
     }
+  };
 
-    // Remove from newly added items
-    setNewlyAddedItems((prev) => prev.filter((item) => item.name !== itemName));
-    toast.info(`${itemName} removed from the newly added items.`, {
-      autoClose: 3000,
-      closeOnClick: true,
-    });
+  const allItemsRemoved = () => {
+    return originalItems.length === 0 && newlyAddedItems.length === 0;
   };
 
   const handleCancelUpdate = () => {
@@ -128,13 +163,167 @@ const OrderUpdatePage = () => {
     });
   };
 
-  const handleUpdateOrder = () => {
-    toast.success('Order updated successfully!', {
-      autoClose: 3000,
-      closeOnClick: true,
-      onClose: () => navigate('/myOrders')
-    });
+  const handleCancelOrder = async () => {
+    if (!cancelReason.trim()) {
+      toast.error('Please provide a cancellation reason');
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      // Make API call to cancel the order
+      const response = await fetch(`http://localhost:5001/api/orders/${orderId}/cancel`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          cancellationReason: cancelReason,
+          cancelledBy: 'customer'
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to cancel order');
+      }
+      
+      toast.success('Order cancelled successfully!', {
+        autoClose: 3000,
+        closeOnClick: true
+      });
+      
+      // Navigate back to orders page after short delay
+      setTimeout(() => navigate('/myOrders'), 2000);
+      
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      toast.error(`Cancellation failed: ${error.message}`, {
+        autoClose: 5000
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const handleCancellationComplete = () => {
+    // Navigate back to orders page
+    navigate('/myOrders');
+  };
+
+  const handleUpdateOrder = async () => {
+    // Don't update if no changes have been made
+    if (newlyAddedItems.length === 0 && removedOriginalItems.length === 0) {
+      toast.info('No changes made to the order');
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      // Prepare updated items data - include only remaining original items and newly added items
+      const updatedItems = [
+        ...originalItems, // Original items that weren't removed
+        ...newlyAddedItems
+      ];
+      
+      // Calculate new total amount
+      const newTotalAmount = calculateTotal(updatedItems);
+      
+      // Make API call to update order items
+      const response = await fetch(`http://localhost:5001/api/orders/${orderId}/items`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          items: updatedItems,
+          totalAmount: newTotalAmount
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update order');
+      }
+      
+      const data = await response.json();
+      console.log('Order updated successfully:', data);
+      
+      toast.success('Order updated successfully!', {
+        autoClose: 3000,
+        closeOnClick: true
+      });
+      
+      // Navigate back to orders page after short delay
+      setTimeout(() => navigate('/myOrders'), 2000);
+      
+    } catch (error) {
+      console.error('Error updating order:', error);
+      toast.error(`Update failed: ${error.message}`, {
+        autoClose: 5000
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const CancelReasonModal = () => (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 px-4"
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        className="bg-white rounded-lg p-6 max-w-md w-full"
+      >
+        <h3 className="text-xl font-bold mb-4">Cancel Order</h3>
+        <p className="text-gray-600 mb-4">
+          Please provide a reason for cancelling this order:
+        </p>
+        <textarea
+          value={cancelReason}
+          onChange={(e) => setCancelReason(e.target.value)}
+          className="w-full border border-gray-300 rounded-md p-3 h-32 resize-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          placeholder="Enter your reason for cancellation..."
+        ></textarea>
+        <div className="mt-6 flex justify-end space-x-3">
+          <button
+            onClick={() => setShowCancelReasonModal(false)}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+          >
+            Back
+          </button>
+          <button
+            onClick={handleCancelOrder}
+            disabled={!cancelReason.trim() || isLoading}
+            className={`px-4 py-2 rounded-lg text-white ${
+              !cancelReason.trim() || isLoading
+                ? "bg-red-400"
+                : "bg-red-600 hover:bg-red-700"
+            } flex items-center`}
+          >
+            {isLoading ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Cancelling...
+              </>
+            ) : (
+              "Confirm Cancellation"
+            )}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
 
   if (isLoading) {
     return (
@@ -290,7 +479,8 @@ const OrderUpdatePage = () => {
                     items={mergedItems}
                     onRemoveItem={handleRemoveItem}
                     totalAmount={calculateTotal(mergedItems)}
-                    disableRemoveForOriginalItems={true}
+                    originalItemIds={originalItemIds}
+                    paymentMethod={order.paymentMethod} // Pass the payment method
                   />
                   
                   <motion.button
@@ -418,18 +608,44 @@ const OrderUpdatePage = () => {
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.5 }}
                   >
-                    <motion.button
-                      onClick={handleUpdateOrder}
-                      className="w-full bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600 transition flex items-center justify-center shadow-md"
-                      disabled={newlyAddedItems.length === 0}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      Update Order
-                    </motion.button>
+                    {allItemsRemoved() ? (
+                      <motion.button
+                        onClick={() => setShowCancelModal(true)}
+                        className="w-full bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition flex items-center justify-center shadow-md"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                        Cancel Order
+                      </motion.button>
+                    ) : (
+                      <motion.button
+                        onClick={handleUpdateOrder}
+                        className="w-full bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600 transition flex items-center justify-center shadow-md"
+                        disabled={newlyAddedItems.length === 0 && removedOriginalItems.length === 0 || isLoading}
+                        whileHover={{ scale: !isLoading && (newlyAddedItems.length > 0 || removedOriginalItems.length > 0) ? 1.02 : 1 }}
+                        whileTap={{ scale: !isLoading && (newlyAddedItems.length > 0 || removedOriginalItems.length > 0) ? 0.98 : 1 }}
+                      >
+                        {isLoading ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Updating...
+                          </>
+                        ) : (
+                          <>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 101.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            Update Order
+                          </>
+                        )}
+                      </motion.button>
+                    )}
                     <motion.button
                       onClick={handleCancelUpdate}
                       className="w-full bg-white text-gray-700 px-6 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 transition flex items-center justify-center shadow-sm"
@@ -437,9 +653,9 @@ const OrderUpdatePage = () => {
                       whileTap={{ scale: 0.98 }}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                       </svg>
-                      Cancel
+                      Back
                     </motion.button>
                   </motion.div>
                 </div>
@@ -453,10 +669,31 @@ const OrderUpdatePage = () => {
       <AnimatePresence>
         {showAddItemsModal && (
           <AddItemsModal
-            foods={restaurantFoods}
             onAddItem={handleAddItem}
             onClose={() => setShowAddItemsModal(false)}
             restaurantName={restaurantName}
+            restaurantId={restaurantId} // Pass the restaurant ID
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Cancel Reason Modal */}
+      <AnimatePresence>
+        {showCancelReasonModal && <CancelReasonModal />}
+      </AnimatePresence>
+
+      {/* Cancel Order Modal */}
+      <AnimatePresence>
+        {showCancelModal && (
+          <CancelOrderModal 
+            isOpen={showCancelModal}
+            orderId={orderId}
+            onClose={() => setShowCancelModal(false)}
+            onCancelComplete={handleCancellationComplete}
+            orderDetails={{ 
+              restaurantName: restaurantName,
+              orderNumber: orderId
+            }}
           />
         )}
       </AnimatePresence>
