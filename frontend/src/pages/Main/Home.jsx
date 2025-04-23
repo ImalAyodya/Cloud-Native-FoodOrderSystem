@@ -1,21 +1,35 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import Header from '../../components/Main/Header';
 import Footer from '../../components/Main/Footer';
 import HeroSection from '../../components/Main/HeroSection';
 import SearchSection from '../../components/Main/SearchSection';
 import CategoriesSection from '../../components/Main/CategoriesSection';
 import FeaturedDishesSection from '../../components/Main/FeaturedDishesSection';
+import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
   const featuredRef = useRef(null);
+  const [user, setUser] = useState(null);
+  const navigate = useNavigate();
 
   const scrollToFeatured = () => {
     featuredRef.current.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
-    // Set logged in user to localStorage
-    localStorage.setItem('loggedInUser', 'user12345');
+    // Get logged-in user from localStorage instead of setting it
+    const loggedInUserData = localStorage.getItem('loggedInUser');
+    
+    if (loggedInUserData) {
+      try {
+        const userData = JSON.parse(loggedInUserData);
+        setUser(userData);
+      } catch (error) {
+        console.error("Failed to parse user data:", error);
+        // Optional: Clear invalid data
+        localStorage.removeItem('loggedInUser');
+      }
+    }
   }, []);
 
   const featuredDishes = [
@@ -66,7 +80,8 @@ const Home = () => {
     { name: 'Pasta', icon: '🍝', color: 'bg-yellow-600' },
     { name: 'Breakfast', icon: '🍳', color: 'bg-indigo-500' },
     { name: 'BBQ', icon: '🍖', color: 'bg-red-600' },
-];
+  ];
+
   const fadeInUp = {
     hidden: { opacity: 0, y: 20 },
     visible: {
@@ -88,8 +103,8 @@ const Home = () => {
 
   return (
     <>
-      <Header />
-      <HeroSection scrollToFeatured={scrollToFeatured} />
+      <Header user={user} />
+      <HeroSection scrollToFeatured={scrollToFeatured} userName={user?.name} />
       <SearchSection categories={categories} />
       <CategoriesSection
         categories={categories}

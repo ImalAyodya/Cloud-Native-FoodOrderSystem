@@ -1,51 +1,54 @@
-// components/Cart/CartItem.js
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FaTrash, FaMinus, FaPlus } from 'react-icons/fa';
+import { FaTrashAlt } from 'react-icons/fa';
 
 const CartItem = ({ item, updateQuantity, removeItem, itemVariants }) => {
+  if (!item) return null; // Ensure item exists before rendering
+
+  const { name, image, size, price, quantity } = item;
+
   return (
     <motion.div
       variants={itemVariants}
-      className="bg-white rounded-xl shadow-md p-6 flex items-center gap-4 hover:shadow-lg transition-shadow duration-300"
+      className="flex items-center border rounded-lg p-4 shadow-sm bg-white"
     >
       <img
-        src={item.image}
-        alt={item.name}
-        className="w-24 h-24 object-cover rounded-lg"
+        src={image}
+        alt={name}
+        className="w-16 h-16 object-cover rounded mr-4"
+        onError={(e) => {
+          e.target.onerror = null;
+          e.target.src = 'https://via.placeholder.com/150?text=Food';
+        }}
       />
-      <div className="flex-1">
-        <h3 className="font-semibold text-lg text-gray-800">{item.name}</h3>
-        <p className="text-orange-500 font-bold text-xl">
-          ${item.price.toFixed(2)}
-        </p>
+      <div className="flex-grow">
+        <h4 className="font-medium text-lg">{name}</h4>
+        <p className="text-sm text-gray-600">Size: {size}</p>
+        <p className="text-sm text-gray-600">Quantity: {quantity}</p>
       </div>
-      <div className="flex items-center gap-3">
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => updateQuantity(item.id, -1)}
-          className="p-2 text-gray-600 hover:text-orange-500 transition-colors"
+      <div className="text-right font-semibold">
+        ${price * quantity}
+      </div>
+      <div className="ml-4 flex items-center">
+        <button
+          className="px-2 py-1 bg-orange-500 text-white rounded-l hover:bg-orange-600"
+          onClick={() => updateQuantity(item.foodId, -1)}
         >
-          <FaMinus />
-        </motion.button>
-        <span className="w-8 text-center font-medium">{item.quantity}</span>
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => updateQuantity(item.id, 1)}
-          className="p-2 text-gray-600 hover:text-orange-500 transition-colors"
+          -
+        </button>
+        <span className="px-3 py-1 border-t border-b">{quantity}</span>
+        <button
+          className="px-2 py-1 bg-orange-500 text-white rounded-r hover:bg-orange-600"
+          onClick={() => updateQuantity(item.foodId, 1)}
         >
-          <FaPlus />
-        </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => removeItem(item.id)}
-          className="p-2 text-red-500 hover:text-red-600 transition-colors ml-2"
+          +
+        </button>
+        <button
+          onClick={() => removeItem(item.foodId)}
+          className="ml-2 text-red-500 hover:text-red-600"
         >
-          <FaTrash />
-        </motion.button>
+          <FaTrashAlt />
+        </button>
       </div>
     </motion.div>
   );

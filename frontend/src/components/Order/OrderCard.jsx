@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import {
   FaStore,
-  FaMotorcycle,
   FaClock,
   FaCheck,
   FaTimes,
@@ -12,13 +12,16 @@ import {
   FaTruck,
   FaUndo,
   FaExclamationTriangle,
-  FaReceipt
+  FaReceipt,
 } from 'react-icons/fa';
+import CancelOrderModal from './CancelOrder';
 
-const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrderStatusChange }) => {
+const OrderCard = ({ order, onViewDetails, onDelete, onReturn, onOrderStatusChange }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate(); // Use navigate for routing
 
   // Utility functions
   const getStatusColor = (status) => {
@@ -49,13 +52,13 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
     pending: <FaClock size={16} />,
     confirmed: <FaCheck size={16} />,
     preparing: <FaUtensils size={16} />,
-    "ready for pickup": <FaBoxOpen size={16} />,
-    "on the way": <FaTruck size={16} />,
+    'ready for pickup': <FaBoxOpen size={16} />,
+    'on the way': <FaTruck size={16} />,
     delivered: <FaCheck size={16} />,
     cancelled: <FaTimes size={16} />,
     failed: <FaExclamationTriangle size={16} />,
     refunded: <FaUndo size={16} />,
-    completed: <FaCheck size={16} />
+    completed: <FaCheck size={16} />,
   };
 
   const formatDate = (dateString) => {
@@ -72,7 +75,8 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
   const handleDelete = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`http://localhost:5001/api/orders/${order.id}`, {
+      // Update this URL to include 'orders/' before the order ID
+      const response = await fetch(`http://localhost:5001/api/orders/orders/${order.id}`, {
         method: 'DELETE',
       });
 
@@ -92,7 +96,7 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
   const handleComplete = async () => {
     if (isLoading) return;
     setIsLoading(true);
-    
+
     try {
       const response = await fetch(`http://localhost:5001/api/orders/update-status/${order.id}`, {
         method: 'PUT',
@@ -101,14 +105,14 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
         },
         body: JSON.stringify({ newStatus: 'Completed' }),
       });
-  
+
       if (!response.ok) throw new Error('Failed to update order status');
-  
+
       const data = await response.json();
-      
+
       // Update local state first
       onOrderStatusChange && onOrderStatusChange(order.id, 'Completed');
-      
+
       // Show success message and close modal
       toast.success('Order marked as completed!');
       setShowCompleteConfirm(false);
@@ -119,25 +123,44 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
       setIsLoading(false);
     }
   };
-  
 
+  const handleUpdate = () => {
+    // Navigate to the update page with the order ID
+    navigate(`/orders/update/${order.id}`);
+  };
+
+  // Callback for when cancellation is complete
+  const handleCancellationComplete = (orderId) => {
+    // Update local state
+    onOrderStatusChange && onOrderStatusChange(order.id, 'Cancelled');
+  };
+
+  // Updated CompleteConfirmationModal with consistent design
   const CompleteConfirmationModal = () => (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
-      onClick={() => !isLoading && setShowCompleteConfirm(false)}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
       <motion.div
-        initial={{ scale: 0.95 }}
-        animate={{ scale: 1 }}
-        exit={{ scale: 0.95 }}
-        className="bg-white rounded-xl p-6 max-w-sm mx-4 shadow-xl"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="absolute inset-0 backdrop-blur-sm bg-black/60" 
+        onClick={() => !isLoading && setShowCompleteConfirm(false)}
+      />
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="bg-white rounded-xl p-6 max-w-sm w-11/12 md:w-auto shadow-2xl relative z-10"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-bold text-gray-900 mb-2">Complete Order</h3>
-        <p className="text-gray-600 mb-6">
+        <div className="mb-2 flex items-center">
+          <div className="bg-green-100 p-2 rounded-full mr-3">
+            <FaCheck className="text-green-500" size={18} />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900">Complete Order</h3>
+        </div>
+        <p className="text-gray-600 mb-6 pl-10">
           Are you sure you want to mark this order as completed?
         </p>
         <div className="flex justify-end gap-3">
@@ -150,36 +173,52 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
           </button>
           <button
             onClick={handleComplete}
-            className="px-4 py-2 text-sm font-medium text-white bg-green-500 hover:bg-green-600 rounded-lg transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium text-white bg-green-500 hover:bg-green-600 rounded-lg transition-colors disabled:opacity-50 shadow-sm flex items-center gap-2"
             disabled={isLoading}
           >
-            {isLoading ? 'Completing...' : 'Complete'}
+            {isLoading ? (
+              <>
+                <span className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></span>
+                <span>Completing...</span>
+              </>
+            ) : (
+              <>
+                <FaCheck size={14} />
+                <span>Complete</span>
+              </>
+            )}
           </button>
         </div>
       </motion.div>
-    </motion.div>
+    </div>
   );
-  
 
-
-  // Delete Confirmation Modal Component
+  // Updated DeleteConfirmationModal with consistent design
   const DeleteConfirmationModal = () => (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
-      onClick={() => setShowDeleteConfirm(false)}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
       <motion.div
-        initial={{ scale: 0.95 }}
-        animate={{ scale: 1 }}
-        exit={{ scale: 0.95 }}
-        className="bg-white rounded-xl p-6 max-w-sm mx-4 shadow-xl"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="absolute inset-0 backdrop-blur-sm bg-black/60"
+        onClick={() => !isLoading && setShowDeleteConfirm(false)}
+      />
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="bg-white rounded-xl p-6 max-w-sm w-11/12 md:w-auto shadow-2xl relative z-10"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Order</h3>
-        <p className="text-gray-600 mb-6">
+        <div className="mb-2 flex items-center">
+          <div className="bg-red-100 p-2 rounded-full mr-3">
+            <FaTimes className="text-red-500" size={18} />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900">Delete Order</h3>
+        </div>
+        <p className="text-gray-600 mb-6 pl-10">
           Are you sure you want to delete this order? This action cannot be undone.
         </p>
         <div className="flex justify-end gap-3">
@@ -192,17 +231,26 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
           </button>
           <button
             onClick={handleDelete}
-            className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-50 shadow-sm flex items-center gap-2"
             disabled={isLoading}
           >
-            {isLoading ? 'Deleting...' : 'Delete'}
+            {isLoading ? (
+              <>
+                <span className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></span>
+                <span>Deleting...</span>
+              </>
+            ) : (
+              <>
+                <FaTimes size={14} />
+                <span>Delete</span>
+              </>
+            )}
           </button>
         </div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 
-  // Main Component Render
   return (
     <>
       <motion.div
@@ -213,11 +261,9 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
         transition={{ duration: 0.3 }}
         className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-300"
       >
-        {/* Status Bar */}
         <div className={`w-full h-1 ${getStatusColor(order.status).split(' ')[0].replace('bg-', 'bg-')}`}></div>
 
         <div className="p-6">
-          {/* Header Section */}
           <div className="flex justify-between items-start mb-4">
             <div className="flex gap-3">
               <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
@@ -234,7 +280,6 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
             </div>
           </div>
 
-          {/* Items Preview */}
           {order.items && (
             <div className="mt-4 mb-4">
               <div className="text-sm text-gray-500 flex items-center gap-2 mb-2">
@@ -244,7 +289,7 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
               <div className="space-y-1 text-gray-700">
                 {order.items.slice(0, 2).map((item, index) => (
                   <p key={index} className="truncate text-sm">
-                    {item.quantity || 1}x {item.name}
+                    {item.quantity || 1}x {item.size} {item.name}
                   </p>
                 ))}
                 {order.items.length > 2 && (
@@ -254,7 +299,6 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
             </div>
           )}
 
-          {/* Date and Action Section */}
           <div className="flex justify-between items-end mt-6">
             <div>
               <div className="flex items-center gap-1.5 text-gray-500 text-sm mb-1">
@@ -264,7 +308,6 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
               <p className="font-bold text-xl">${order.total.toFixed(2)}</p>
             </div>
             <div className="flex gap-2">
-              {/* Action Buttons */}
               {['cancelled', 'failed', 'completed', 'refunded'].includes(order.status.toLowerCase()) && (
                 <motion.button
                   whileHover={{ scale: 1.03 }}
@@ -278,14 +321,25 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
               )}
 
               {order.status.toLowerCase() === 'pending' && (
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={onUpdate}
-                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors duration-300 font-medium text-sm shadow-sm"
-                >
-                  Update
-                </motion.button>
+                <>
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setShowCancelModal(true)}
+                    className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors duration-300 font-medium text-sm shadow-sm"
+                    disabled={isLoading}
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleUpdate}
+                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors duration-300 font-medium text-sm shadow-sm"
+                  >
+                    Update
+                  </motion.button>
+                </>
               )}
 
               {order.status.toLowerCase() === 'delivered' && (
@@ -323,10 +377,15 @@ const OrderCard = ({ order, onViewDetails, onDelete, onUpdate, onReturn, onOrder
         </div>
       </motion.div>
 
-      {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {showDeleteConfirm && <DeleteConfirmationModal />}
         {showCompleteConfirm && <CompleteConfirmationModal />}
+        <CancelOrderModal 
+          isOpen={showCancelModal}
+          orderId={order.id}
+          onClose={() => setShowCancelModal(false)}
+          onCancelComplete={handleCancellationComplete}
+        />
       </AnimatePresence>
     </>
   );
