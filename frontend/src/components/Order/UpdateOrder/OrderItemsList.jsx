@@ -2,7 +2,7 @@ import React from 'react';
 import { FaTrash, FaCheck, FaShoppingBag } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const OrderItemsList = ({ items, onRemoveItem, totalAmount, disableRemoveForOriginalItems }) => {
+const OrderItemsList = ({ items, onRemoveItem, totalAmount, originalItemIds, paymentMethod }) => {
   // Animation variants
   const listVariants = {
     hidden: { opacity: 0 },
@@ -34,6 +34,11 @@ const OrderItemsList = ({ items, onRemoveItem, totalAmount, disableRemoveForOrig
     tap: { scale: 0.9, transition: { duration: 0.1 } }
   };
 
+  // Use proper unique keys based on both name and size
+  const getItemKey = (item, index) => {
+    return item._id ? `${item._id}-${item.size}` : `item-${item.name}-${item.size}-${index}`;
+  };
+
   return (
     <div className="space-y-4">
       {items.length === 0 ? (
@@ -47,7 +52,7 @@ const OrderItemsList = ({ items, onRemoveItem, totalAmount, disableRemoveForOrig
             <FaShoppingBag className="text-gray-400" size={24} />
           </div>
           <p className="text-gray-500 font-medium">No items in this order yet.</p>
-          <p className="text-gray-400 text-sm mt-2">Add some items to get started</p>
+          <p className="text-gray-400 text-sm mt-2">Add some items or cancel this order</p>
         </motion.div>
       ) : (
         <motion.div 
@@ -66,11 +71,17 @@ const OrderItemsList = ({ items, onRemoveItem, totalAmount, disableRemoveForOrig
           <div className="divide-y divide-gray-100 px-4">
             <AnimatePresence>
               {items.map((item, index) => {
-                const isOriginalItem = disableRemoveForOriginalItems && index < items.length - (items.length - index);
+                // Check if this is an original item (using the item key)
+                const itemKey = getItemKey(item, index);
+                const isOriginalItem = originalItemIds ? originalItemIds.some(orig => orig.key === itemKey) : false;
+                const isCashOnDelivery = paymentMethod === 'Cash on delivery';
                 
+                // Determine if the remove button should be disabled
+                const isRemoveDisabled = isOriginalItem && !isCashOnDelivery;
+
                 return (
                   <motion.div 
-                    key={`${item.name}-${index}`}
+                    key={itemKey}
                     variants={itemVariants}
                     exit="exit"
                     layout
@@ -85,9 +96,9 @@ const OrderItemsList = ({ items, onRemoveItem, totalAmount, disableRemoveForOrig
                         <div className="flex items-center mt-1">
                           <span className="text-sm text-gray-500 mr-2">{item.size}</span>
                           {isOriginalItem && (
-                            <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full flex items-center">
+                            <span className={`bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full flex items-center ${!isCashOnDelivery ? 'border border-red-300' : ''}`}>
                               <FaCheck className="mr-1" size={10} />
-                              Original
+                              {!isCashOnDelivery ? 'Cannot Remove' : 'Original'}
                             </span>
                           )}
                           {!isOriginalItem && (
@@ -106,16 +117,16 @@ const OrderItemsList = ({ items, onRemoveItem, totalAmount, disableRemoveForOrig
                       <motion.button
                         variants={buttonVariants}
                         initial="initial"
-                        whileHover={!isOriginalItem ? "hover" : "initial"}
-                        whileTap={!isOriginalItem ? "tap" : "initial"}
-                        onClick={() => onRemoveItem(item.name)}
+                        whileHover={isRemoveDisabled ? {} : "hover"}
+                        whileTap={isRemoveDisabled ? {} : "tap"}
+                        onClick={() => onRemoveItem(itemKey)}
                         className={`p-2 rounded-full transition ${
-                          isOriginalItem 
+                          isRemoveDisabled 
                             ? 'text-gray-300 cursor-not-allowed' 
                             : 'text-red-500 hover:bg-red-50 hover:text-red-600'
                         }`}
-                        disabled={isOriginalItem}
-                        title={isOriginalItem ? "Can't remove original items" : "Remove item"}
+                        title={isRemoveDisabled ? `Cannot remove original items with ${paymentMethod}` : "Remove item"}
+                        disabled={isRemoveDisabled}
                       >
                         <FaTrash size={16} />
                       </motion.button>
@@ -139,8 +150,6 @@ const OrderItemsList = ({ items, onRemoveItem, totalAmount, disableRemoveForOrig
             <span className="text-gray-700">Subtotal</span>
             <span className="font-medium">${totalAmount.toFixed(2)}</span>
           </div>
-          
-        
         </motion.div>
       )}
     </div>
