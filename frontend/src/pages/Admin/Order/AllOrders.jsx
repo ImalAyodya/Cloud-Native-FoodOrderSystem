@@ -277,7 +277,8 @@ const handleDeleteOrder = async (orderId) => {
   }).then(async (result) => {
     if (result.isConfirmed) {
       try {
-        const response = await fetch(`http://localhost:5001/api/orders/${orderId}`, {
+        // Correct URL path with /orders/ segment before the orderId
+        const response = await fetch(`http://localhost:5001/api/orders/orders/${orderId}`, {
           method: 'DELETE',
         });
 
