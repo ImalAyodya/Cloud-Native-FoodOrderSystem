@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 const MenuItem = require('../models/MenuItem');
 const Restaurant = require('../models/Restaurant');
 
-// Create new menu item
+//Create new menu item
 const addMenuItem = async (req, res) => {
   try {
-    // Validate if restaurant exists
+    //Validate if restaurant exists
     const restaurant = await Restaurant.findById(req.body.restaurantId);
     if (!restaurant) {
       return res.status(404).json({
@@ -14,10 +14,10 @@ const addMenuItem = async (req, res) => {
       });
     }
 
-    // Create new menu item
+    //Create new menu item
     const newMenuItem = new MenuItem({
       ...req.body
-      // createdBy should be provided in the request body since we're not using auth
+      //createdBy should be provided in the request body since we're not using auth
     });
     
     const menuItem = await newMenuItem.save();
@@ -30,7 +30,7 @@ const addMenuItem = async (req, res) => {
   }
 };
 
-// Get all menu items (with optional filters)
+//Get all menu items
 const getMenuItems = async (req, res) => {
   try {
     const {
