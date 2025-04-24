@@ -1,4 +1,5 @@
 const Restaurant = require('../models/Restaurant');
+const mongoose = require('mongoose'); // Added mongoose for ObjectId validation
 
 // Create new restaurant
 const addRestaurant = async (req, res) => {
@@ -144,6 +145,44 @@ const getNearbyRestaurants = async (req, res) => {
   }
 };
 
+/**
+ * Get restaurants by owner user ID
+ * @route GET /api/restaurants/user/:userId
+ * @access Private
+ */
+const getRestaurantsByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Validate userId format but don't check if it matches authenticated user
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID format'
+      });
+    }
+
+    // Find all restaurants owned by this user without role validation
+    const restaurants = await Restaurant.find({ ownerId: userId })
+      .select('-__v')
+      .sort({ createdAt: -1 });
+
+    // Return the found restaurants
+    return res.status(200).json({
+      success: true,
+      count: restaurants.length,
+      data: restaurants
+    });
+  } catch (error) {
+    console.error('Error in getRestaurantsByUserId:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while fetching restaurants',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   addRestaurant,
   getRestaurants,
@@ -152,5 +191,6 @@ module.exports = {
   setAvailability,
   getAvailability,
   deleteRestaurant,
-  getNearbyRestaurants
+  getNearbyRestaurants,
+  getRestaurantsByUserId
 };

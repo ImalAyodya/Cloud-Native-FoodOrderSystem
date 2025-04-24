@@ -1,6 +1,7 @@
 const express = require('express');
 const RestaurantRouter = express.Router();
 const restaurantController = require('../controllers/restaurantController');
+const { protect } = require('../middleware/authMiddleware');
 
 // Restaurant CRUD operations
 //http://localhost:5003/api/restaurant/add
@@ -23,5 +24,9 @@ RestaurantRouter.get('/getAvailability', restaurantController.getAvailability);
 // Geolocation endpoints
 //http://localhost:5003/api/restaurant/nearby
 RestaurantRouter.get('/nearby', restaurantController.getNearbyRestaurants);
+
+// Get restaurants by user ID
+//http://localhost:5003/api/restaurant/user/:userId
+RestaurantRouter.get('/user/:userId', protect, restaurantController.getRestaurantsByUserId);
 
 module.exports = RestaurantRouter;
