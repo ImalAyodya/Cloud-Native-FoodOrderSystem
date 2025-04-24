@@ -1,6 +1,7 @@
 const express = require('express');
 const MenuItemRouter = express.Router();
 const menuItemController = require('../controllers/menuItemController');
+const upload = require('../middleware/multerConfig');
 
 // Basic CRUD Operations
 //http://localhost:5003/api/menu/add
@@ -33,4 +34,8 @@ MenuItemRouter.put('/batch', menuItemController.batchUpdate);
 
 //http://localhost:5003/api/menu/:restaurantId
 MenuItemRouter.get('/:restaurantId/menu', menuItemController.getMenuItemsByRestaurant);
+
+// Bulk Import Endpoint //http://localhost:5003/api/menu/import
+MenuItemRouter.post('/import', upload.single('file'), menuItemController.importMenuItems);
+
 module.exports = MenuItemRouter;
