@@ -1,20 +1,17 @@
 import React from 'react';
+import { FaCreditCard, FaMoneyBill } from 'react-icons/fa';
 
-const PaymentSection = ({ paymentMethod, totalAmount }) => {
+const PaymentSection = ({ paymentMethod, totalAmount, onUpdateOrder }) => {
   return (
     <div className="mt-3">
       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             {paymentMethod === 'Credit Card' && (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
+              <FaCreditCard className="text-blue-500" />
             )}
             {paymentMethod === 'Cash on delivery' && (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z" />
-              </svg>
+              <FaMoneyBill className="text-green-500" />
             )}
             {paymentMethod === 'PayPal' && (
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -40,9 +37,12 @@ const PaymentSection = ({ paymentMethod, totalAmount }) => {
             <span className="text-green-700">You can modify or remove any items.</span>
           </div>
         ) : (
-          <div className="mt-2 p-2 bg-yellow-50 border border-yellow-100 rounded text-sm">
-            <span className="font-medium text-yellow-700">Online Payment: </span>
-            <span className="text-yellow-700">You cannot remove original items, only add new ones.</span>
+          <div className="mt-2 p-2 bg-blue-50 border border-blue-100 rounded text-sm">
+            <div className="flex items-center gap-1 mb-1">
+              <FaCreditCard className="text-blue-500" />
+              <span className="font-medium text-blue-700">Credit Card Payment: </span>
+            </div>
+            <span className="text-blue-700">You'll be prompted to enter your card details to pay for newly added items.</span>
           </div>
         )}
       </div>
