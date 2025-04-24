@@ -17,7 +17,7 @@ const Header = ({isNotHome}) => {
   }, []);
 
   const navItems = [
-    { name: 'Home', path: '/' },
+    { name: 'Home', path: '/home' },
     { name: 'Resturents', path: '/resturents' },
     { name: 'Menu', path: '/menu' },
     { name: 'About', path: '/about' },
