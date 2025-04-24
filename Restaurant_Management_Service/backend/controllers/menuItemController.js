@@ -1,11 +1,13 @@
 const mongoose = require('mongoose');
 const MenuItem = require('../models/MenuItem');
 const Restaurant = require('../models/Restaurant');
+const fs = require('fs');
+const { parse } = require('csv-parse');
 
-// Create new menu item
+//Create new menu item
 const addMenuItem = async (req, res) => {
   try {
-    // Validate if restaurant exists
+    //Validate if restaurant exists
     const restaurant = await Restaurant.findById(req.body.restaurantId);
     if (!restaurant) {
       return res.status(404).json({
@@ -14,10 +16,10 @@ const addMenuItem = async (req, res) => {
       });
     }
 
-    // Create new menu item
+    //Create new menu item
     const newMenuItem = new MenuItem({
       ...req.body
-      // createdBy should be provided in the request body since we're not using auth
+      //createdBy should be provided in the request body since we're not using auth
     });
     
     const menuItem = await newMenuItem.save();
@@ -30,7 +32,7 @@ const addMenuItem = async (req, res) => {
   }
 };
 
-// Get all menu items (with optional filters)
+//Get all menu items
 const getMenuItems = async (req, res) => {
   try {
     const {
@@ -392,6 +394,137 @@ const getMenuItemsByRestaurant = async (req, res) => {
   }
 };
 
+//Import menu items from CSV or JSON
+const importMenuItems = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+
+    const filePath = req.file.path;
+    const fileExtension = req.file.originalname.split('.').pop().toLowerCase();
+    const results = [];
+    const errors = [];
+    let menuItems = [];
+
+    // Parse file based on extension
+    if (fileExtension === 'csv') {
+      // Parse CSV
+      fs.createReadStream(filePath)
+        .pipe(parse({ columns: true, trim: true }))
+        .on('data', (row) => menuItems.push(row))
+        .on('error', (error) => {
+          errors.push({ error: `CSV parsing error: ${error.message}` });
+        })
+        .on('end', async () => {
+          await processMenuItems(menuItems, req, results, errors);
+          cleanUp(filePath);
+          sendResponse(res, results, errors);
+        });
+    } else if (fileExtension === 'json') {
+      // Parse JSON
+      const rawData = fs.readFileSync(filePath);
+      try {
+        menuItems = JSON.parse(rawData);
+        await processMenuItems(menuItems, req, results, errors);
+        cleanUp(filePath);
+        sendResponse(res, results, errors);
+      } catch (error) {
+        cleanUp(filePath);
+        return res.status(400).json({
+          success: false,
+          message: `JSON parsing error: ${error.message}`
+        });
+      }
+    } else {
+      cleanUp(filePath);
+      return res.status(400).json({
+        success: false,
+        message: 'Unsupported file format'
+      });
+    }
+  } catch (error) {
+    cleanUp(req.file?.path);
+    res.status(500).json({
+      success: false,
+      message: `Server error: ${error.message}`
+    });
+  }
+};
+
+// Helper function to process menu items
+async function processMenuItems(menuItems, req, results, errors) {
+  for (const [index, item] of menuItems.entries()) {
+    try {
+      // Validate restaurantId
+      const restaurant = await Restaurant.findById(item.restaurantId);
+      if (!restaurant) {
+        errors.push({ index, item, error: 'Restaurant not found' });
+        continue;
+      }
+
+      // Validate required fields
+      if (!item.name || !item.price || !item.category || !item.createdBy) {
+        errors.push({ index, item, error: 'Missing required fields (name, price, category, createdBy)' });
+        continue;
+      }
+
+      // Parse nested fields (e.g., variations, nutrition, dietary)
+      const parsedItem = {
+        ...item,
+        price: parseFloat(item.price),
+        variations: item.variations ? JSON.parse(item.variations) : [],
+        nutrition: item.nutrition ? JSON.parse(item.nutrition) : { calories: 0, allergens: [] },
+        dietary: item.dietary ? JSON.parse(item.dietary) : {
+          isVegetarian: false,
+          isVegan: false,
+          isGlutenFree: false
+        },
+        gallery: item.gallery ? JSON.parse(item.gallery) : [],
+        tags: item.tags ? JSON.parse(item.tags) : [],
+        ingredients: item.ingredients ? JSON.parse(item.ingredients) : [],
+        preparationTime: item.preparationTime ? parseInt(item.preparationTime) : 15,
+        featured: item.featured ? item.featured === 'true' || item.featured === true : false,
+        isAvailable: item.isAvailable ? item.isAvailable === 'true' || item.isAvailable === true : true
+      };
+
+      // Create and validate MenuItem
+      const menuItem = new MenuItem(parsedItem);
+      await menuItem.validate(); // Run Mongoose validation
+      const savedItem = await menuItem.save();
+      results.push(savedItem);
+    } catch (error) {
+      errors.push({ index, item, error: error.message });
+    }
+  }
+}
+
+// Helper function to clean up uploaded file
+function cleanUp(filePath) {
+  if (filePath && fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
+}
+
+// Helper function to send response
+function sendResponse(res, results, errors) {
+  res.status(200).json({
+    success: true,
+    imported: results.length,
+    failed: errors.length,
+    results: results.map(item => ({
+      _id: item._id,
+      name: item.name,
+      restaurantId: item.restaurantId
+    })),
+    errors
+  });
+}
+
+
 module.exports = {
   addMenuItem,
   getMenuItems,
@@ -402,5 +535,6 @@ module.exports = {
   setFeatured,
   getFeaturedItems,
   batchUpdate,
-  getMenuItemsByRestaurant
+  getMenuItemsByRestaurant,
+  importMenuItems
 };
