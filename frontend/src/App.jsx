@@ -23,6 +23,9 @@ import Checkout from "./pages/Main/CheckoutPage";
 import Resturent from "./pages/Main/Resturent";
 import LoginPage from "./pages/Main/Login";
 
+import PaymentSuccessPage from './pages/Main/PaymentSuccessPage';
+import PaymentCancelPage from './pages/Main/PaymentSuccessPage';
+
 
 function App() {
   return (
@@ -71,6 +74,10 @@ function App() {
 
         {/* Order Update Page */}
         <Route path="/orders/update/:orderId" element={<OrderUpdatePage />} />
+
+        {/* Payment routes */}
+        <Route path="/payment/success" element={<PaymentSuccessPage />} />
+        <Route path="/payment/cancel" element={<PaymentCancelPage />} />
 
       </Routes>
     </Router>
