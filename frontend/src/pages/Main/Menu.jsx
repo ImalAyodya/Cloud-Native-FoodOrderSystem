@@ -4,7 +4,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Header from '../../components/Main/Header';
 import Footer from '../../components/Main/Footer';
-import { FiPlus, FiShoppingCart, FiSearch, FiFilter } from 'react-icons/fi';
+import { FiPlus, FiSearch, FiFilter } from 'react-icons/fi';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 
@@ -46,6 +46,13 @@ const Menu = () => {
     if (selectedItems.length > 0) {
       sessionStorage.setItem('selectedItems', JSON.stringify(selectedItems));
     }
+    
+    // Make cartCount available in localStorage for Header component
+    localStorage.setItem('cartCount', totalCount.toString());
+    
+    // Dispatch an event to notify other components
+    const cartUpdateEvent = new CustomEvent('cartUpdated', { detail: { count: totalCount } });
+    window.dispatchEvent(cartUpdateEvent);
   }, [selectedItems]);
 
   // Fetch menu items from API
@@ -143,7 +150,7 @@ const Menu = () => {
 
   return (
     <>
-      <Header />
+      <Header cartCount={cartCount} />
       <ToastContainer position="top-center" autoClose={2000} />
 
       <section className="relative h-[300px] bg-orange-500">
@@ -203,18 +210,7 @@ const Menu = () => {
             </div>
 
             {/* Cart button */}
-            <button
-              onClick={goToCart}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-            >
-              <FiShoppingCart />
-              <span>View Cart</span>
-              {cartCount > 0 && (
-                <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
-                  {cartCount}
-                </span>
-              )}
-            </button>
+            
           </div>
 
           {/* Menu items */}
