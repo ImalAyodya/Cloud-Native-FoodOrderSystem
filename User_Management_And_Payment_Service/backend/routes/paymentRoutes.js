@@ -11,4 +11,6 @@ router.post('/webhook', express.raw({ type: 'application/json' }), paymentContro
 // Get payment status
 router.get('/status/:sessionId', paymentController.getPaymentStatus);
 
+// Add to your payment routes
+router.post('/create-payment-intent', paymentController.createPaymentIntent);
 module.exports = router;
