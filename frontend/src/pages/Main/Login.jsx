@@ -240,7 +240,7 @@ const LoginPage = () => {
             variants={itemVariants} 
             className="transform perspective-1000"
           >
-            <div className="bg-white rounded-2xl shadow-2xl p-7 backdrop-blur-sm bg-white/90 border border-gray-100">
+            <div className="rounded-2xl shadow-2xl p-7 backdrop-blur-sm bg-white/90 border border-gray-100">
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
                   <div className="relative">
