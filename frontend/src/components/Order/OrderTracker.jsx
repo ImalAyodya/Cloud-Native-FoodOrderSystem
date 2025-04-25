@@ -8,7 +8,8 @@ import {
   FaBoxOpen,
   FaTimes,
   FaExclamationTriangle,
-  FaUndo
+  FaUndo,
+  FaBox
 } from 'react-icons/fa';
 
 const OrderTracker = ({ currentStatus, statusTimestamps = {} }) => {
@@ -25,6 +26,7 @@ const OrderTracker = ({ currentStatus, statusTimestamps = {} }) => {
     { id: 'Pending', label: 'Order Placed', icon: FaClipboardList, color: 'bg-blue-500' },
     { id: 'Confirmed', label: 'Confirmed', icon: FaCheck, color: 'bg-purple-500' },
     { id: 'Preparing', label: 'Preparing', icon: FaUtensils, color: 'bg-orange-500' },
+    { id: 'Ready for Pickup', label: 'Ready for Pickup', icon: FaBox, color: 'bg-yellow-500' },
     { id: 'On the way', label: 'On the Way', icon: FaBiking, color: 'bg-indigo-500' },
     { id: 'Delivered', label: 'Delivered', icon: FaBoxOpen, color: 'bg-green-500' }
   ];
