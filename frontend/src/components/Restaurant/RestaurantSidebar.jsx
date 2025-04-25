@@ -51,7 +51,7 @@ const RestaurantSidebar = ({ onLogout }) => {
           </NavLink>
           
           <NavLink 
-            to="/restaurant/orders"
+            to={`/restaurant/${id}/orders`}
             className={({ isActive }) => isActive ? activeStyle : inactiveStyle}
           >
             <FaClipboardList className="mr-3" /> Orders
