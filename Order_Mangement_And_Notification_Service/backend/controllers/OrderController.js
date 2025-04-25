@@ -603,4 +603,72 @@ exports.getOrderByOrderId = async (req, res) => {
       console.error('Error fetching order:', error);
       res.status(500).json({ success: false, message: 'Server error', error: error.message });
     }
+};
+
+// Get orders by restaurant ID
+exports.getOrdersByRestaurantId = async (req, res) => {
+  try {
+    const { restaurantId } = req.params;
+    
+    if (!restaurantId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Restaurant ID is required'
+      });
+    }
+    
+    // Find orders for the specified restaurant
+    const orders = await Order.find({ restaurant: restaurantId })
+      .sort({ placedAt: -1 }); // Sort by newest first
+    
+    if (!orders || orders.length === 0) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'No orders found for this restaurant' 
+      });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      count: orders.length,
+      orders: orders
+    });
+  } catch (error) {
+    console.error('Error fetching restaurant orders:', error);
+    return res.status(500).json({ 
+      success: false,
+      message: 'Server error while fetching restaurant orders', 
+      error: error.message 
+    });
+  }
+};
+
+// Get Ready for Pickup orders (specific convenience function)
+exports.getReadyForPickupOrders = async (req, res) => {
+    try {
+      // Find all orders with Ready for Pickup status
+      const readyOrders = await Order.find({ orderStatus: 'Ready for Pickup' })
+        .sort({ 'statusTimestamps.Ready for Pickup': -1 }); // Sort by when they became ready
+      
+      if (!readyOrders || readyOrders.length === 0) {
+        return res.status(404).json({ 
+          success: false,
+          message: 'No orders are currently ready for pickup' 
+        });
+      }
+      
+      return res.status(200).json({
+        success: true,
+        count: readyOrders.length,
+        orders: readyOrders
+      });
+    } catch (error) {
+      console.error('Error fetching ready for pickup orders:', error);
+      return res.status(500).json({ 
+        success: false,
+        message: 'Server error while fetching ready for pickup orders', 
+        error: error.message 
+      });
+    }
   };
+

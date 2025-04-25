@@ -18,6 +18,10 @@ router.delete('/orders/:orderId', OrderController.deleteOrderById);
 //http://localhost:5001/api/orders/user/:userId
 router.get('/user/:userId', OrderController.getOrdersByUserId);
 
+// Get orders by restaurant ID
+// http://localhost:5001/api/orders/restaurant/:restaurantId
+router.get('/restaurant/:restaurantId', OrderController.getOrdersByRestaurantId);
+
 // Route to update order items
 // http://localhost:5001/api/orders/:orderId/items
 router.put('/:orderId/items', OrderController.updateOrderItems);
@@ -26,4 +30,8 @@ router.put('/:orderId/items', OrderController.updateOrderItems);
 // http://localhost:5001/api/orders/orders/:orderId
 router.get('/orders/:orderId', OrderController.getOrderByOrderId);
 
+
+// Get all orders with Ready for Pickup status
+// http://localhost:5001/api/orders/ready-for-pickup
+router.get('/ready-for-pickup', OrderController.getReadyForPickupOrders);
 module.exports = router;
