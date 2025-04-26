@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import axios from 'axios';
-import { FaSearch, FaFilter, FaSync, FaEye } from 'react-icons/fa';
+import { FaSearch, FaFilter, FaSync, FaEye, FaTrash, FaExclamationTriangle, FaTimes } from 'react-icons/fa';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import RestaurantLayout from '../../components/Restaurant/RestaurantLayout';
 import OrderDetails from '../../components/ResturentOrder/ResturentOrderDetails';
+import RestaurantCancelOrder from '../../components/ResturentOrder/RestaurantCancelOrder';
 
 const RestaurantOrdersPage = () => {
   const { id } = useParams();
@@ -20,11 +21,14 @@ const RestaurantOrdersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState(null);
 
   useEffect(() => {
     if (id) {
       console.log("Fetching orders for restaurant ID:", id);
       fetchOrders();
+      console.log("Orders fetched successfully:", orders);
     } else {
       console.error("No restaurant ID provided");
       setError("No restaurant ID provided");
@@ -105,14 +109,26 @@ const RestaurantOrdersPage = () => {
         size: item.size || 'N/A'
       })) : [],
       total: order.totalAmount || 0,
+      totalAmount: order.totalAmount || 0,
       deliveryAddress: order.customer?.address || 'No address provided',
       customer: order.customer || { name: 'N/A', email: 'N/A', phone: 'N/A' },
-      restaurant: order.restaurantName || 'N/A',
+      restaurant: order.restaurant || 'N/A',
+      restaurantName: order.restaurantName || 'N/A',
       paymentMethod: order.paymentMethod || 'N/A',
       paymentStatus: order.paymentStatus || 'N/A',
+      paymentTransactionId: order.paymentTransactionId || '',
       placedAt: order.placedAt || null,
       date: order.placedAt || null,
+      orderNote: order.orderNote || '',
+      discount: order.discount || 0,
+      promoCode: order.promoCode || '',
+      loggedInUserName: order.loggedInUserName || '',
+      // Include cancellation data if it exists
+      cancellation: order.cancellation || null
     };
+    
+    console.log("Original order:", order);
+    console.log("Formatted order with cancellation:", formattedOrder);
     
     setSelectedOrder(formattedOrder);
   };
@@ -174,6 +190,102 @@ const RestaurantOrdersPage = () => {
       console.error('Error updating order status:', error);
       toast.error(`Failed to update status: ${error.message || 'Unknown error'}`);
     }
+  };
+
+  const handleDeleteOrder = async (orderId) => {
+    // First confirm with the user
+    if (!window.confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      // Show loading toast
+      const loadingToast = toast.loading("Deleting order...");
+      
+      const token = localStorage.getItem('token');
+      
+      // Make the API call to delete the order
+      const response = await axios.delete(
+        `http://localhost:5001/api/orders/orders/${orderId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      
+      // Dismiss the loading toast
+      toast.dismiss(loadingToast);
+      
+      if (response.data.success) {
+        // Remove the order from local state
+        const updatedOrders = orders.filter(order => order.orderId !== orderId);
+        setOrders(updatedOrders);
+        
+        // Close the order details modal if it's open
+        if (selectedOrder && selectedOrder.orderId === orderId) {
+          setSelectedOrder(null);
+        }
+        
+        // Show success message
+        toast.success(`Order ${orderId} has been deleted`);
+      } else {
+        throw new Error(response.data.message || 'Failed to delete order');
+      }
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      
+      // Show specific error for status-related rejections
+      if (error.response && error.response.status === 403) {
+        toast.error('Only Completed or Cancelled orders can be deleted');
+      } else {
+        toast.error(`Failed to delete order: ${error.message || 'Unknown error'}`);
+      }
+    }
+  };
+
+  const handleCancelOrder = (order) => {
+    // Only allow cancellation of pending orders
+    if (order.orderStatus.toLowerCase() !== 'pending') {
+      toast.error('Only pending orders can be cancelled');
+      return;
+    }
+    
+    setOrderToCancel(order);
+    setShowCancelModal(true);
+  };
+
+  const handleCancellationComplete = (orderId) => {
+    // Update the orders list by changing the status to 'cancelled'
+    const updatedOrders = orders.map(order => {
+      if (order.orderId === orderId) {
+        return {
+          ...order,
+          orderStatus: 'Cancelled',
+          cancellation: {
+            timestamp: new Date(),
+            cancelledBy: 'restaurant'
+          }
+        };
+      }
+      return order;
+    });
+    
+    setOrders(updatedOrders);
+    
+    // If we had a selected order and it was the one cancelled, update it too
+    if (selectedOrder && selectedOrder.orderId === orderId) {
+      setSelectedOrder({
+        ...selectedOrder,
+        orderStatus: 'Cancelled',
+        cancellation: {
+          timestamp: new Date(),
+          cancelledBy: 'restaurant'
+        }
+      });
+    }
+    
+    toast.success(`Order ${orderId} has been cancelled`);
   };
 
   // Get appropriate badge class based on status
@@ -390,10 +502,32 @@ const RestaurantOrdersPage = () => {
                           <button 
                             onClick={() => handleViewDetails(order)}
                             className="text-orange-600 hover:text-orange-900 mr-3"
+                            title="View Details"
                           >
                             <FaEye size={18} />
                           </button>
                           
+                          {/* Only show delete button for Completed or Cancelled orders */}
+                          {(order.orderStatus === 'Completed' || order.orderStatus === 'Cancelled') && (
+                            <button 
+                              onClick={() => handleDeleteOrder(order.orderId)}
+                              className="text-red-600 hover:text-red-900"
+                              title="Delete Order"
+                            >
+                              <FaTrash size={16} />
+                            </button>
+                          )}
+
+                          {/* Show cancel button for pending orders */}
+                          {order.orderStatus.toLowerCase() === 'pending' && (
+                            <button 
+                              onClick={() => handleCancelOrder(order)}
+                              className="text-red-600 hover:text-red-900 mr-2"
+                              title="Cancel Order"
+                            >
+                              <FaTimes size={16} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </motion.tr>
@@ -440,6 +574,28 @@ const RestaurantOrdersPage = () => {
           <RestaurantOrdersContent />
         </div>
       </RestaurantLayout>
+      
+      {/* Order details modal */}
+      {selectedOrder && (
+        <OrderDetails 
+          order={selectedOrder} 
+          onClose={() => setSelectedOrder(null)}
+          onStatusChange={(id, status) => handleStatusChange(id, status)}
+        />
+      )}
+      
+      {/* Cancel order modal */}
+      <RestaurantCancelOrder
+        isOpen={showCancelModal}
+        orderId={orderToCancel?.orderId}
+        customerName={orderToCancel?.customer?.name}
+        onClose={() => {
+          setShowCancelModal(false);
+          setOrderToCancel(null);
+        }}
+        onCancelComplete={handleCancellationComplete}
+      />
+      
       <ToastContainer position="bottom-right" />
     </>
   );

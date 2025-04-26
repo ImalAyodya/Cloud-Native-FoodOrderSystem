@@ -24,6 +24,13 @@ import {
 import OrderTracker from '../../components/Order/OrderTracker';
 
 const ResturentOrderDetails = ({ order, onClose, onStatusChange }) => {
+  // Add console logs at the beginning of the component
+  console.log("==== ORDER DETAILS ====");
+  console.log("Full order object:", order);
+  console.log("Cancellation data:", order?.cancellation);
+  console.log("Order status:", order?.orderStatus);
+  console.log("Status timestamps:", order?.statusTimestamps);
+  
   // Calculate subtotal correctly by summing all item prices * quantities
   const calculateSubtotal = () => {
     if (!order || !order.items || !Array.isArray(order.items)) return 0;
@@ -186,13 +193,6 @@ const ResturentOrderDetails = ({ order, onClose, onStatusChange }) => {
           </div>
         );
         break;
-        
-      
-
-      
-        
-      
-        
       // No action buttons for completed, cancelled, failed, refunded statuses
     }
   }
@@ -254,31 +254,34 @@ const ResturentOrderDetails = ({ order, onClose, onStatusChange }) => {
             </div>
           )}
 
-          {/* Cancellation Details - Displayed only if order was cancelled */}
-          {orderStatus.toLowerCase() === 'cancelled' && (
+          {/* Cancellation Details - Displayed only if order was cancelled and cancellation data exists */}
+          {orderStatus.toLowerCase() === 'cancelled' && order.cancellation && (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="mb-8 bg-red-50 border border-red-100 rounded-xl p-6"
             >
+              {console.log("Rendering cancellation section")}
+              {console.log("Cancellation data in render:", order.cancellation)}
+              
               <div className="flex items-center gap-2 mb-4 text-red-600">
                 <FaExclamationTriangle />
                 <h3 className="font-bold text-lg">Order Cancellation</h3>
               </div>
               <div className="space-y-3 text-gray-700">
                 <div>
-                  <span className="font-medium">Cancelled By:</span> {getCancellationByText(cancellation.cancelledBy)}
+                  <span className="font-medium">Cancelled By:</span> {getCancellationByText(order.cancellation.cancelledBy)}
                 </div>
                 <div>
-                  <span className="font-medium">Reason:</span> {cancellation.reason || 'No reason provided'}
+                  <span className="font-medium">Reason:</span> {order.cancellation.reason || 'No reason provided'}
                 </div>
-                {cancellation.additionalInfo && (
+                {order.cancellation.additionalInfo && (
                   <div>
-                    <span className="font-medium">Additional Information:</span> {cancellation.additionalInfo}
+                    <span className="font-medium">Additional Information:</span> {order.cancellation.additionalInfo}
                   </div>
                 )}
                 <div>
-                  <span className="font-medium">Cancelled On:</span> {formatDate(cancellation.timestamp)}
+                  <span className="font-medium">Cancelled On:</span> {formatDate(order.cancellation.timestamp)}
                 </div>
               </div>
             </motion.div>
