@@ -17,6 +17,7 @@
     "@stripe/stripe-js": "^7.2.0",
     "@tailwindcss/vite": "^4.1.1",
     "axios": "^1.8.4",
+    "browser-image-compression": "^2.0.2",
     "chart.js": "^4.4.8",
     "framer-motion": "^12.6.3",
     "gensync": "^1.0.0-beta.2",

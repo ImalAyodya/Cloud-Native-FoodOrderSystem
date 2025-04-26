@@ -30,6 +30,7 @@ import RestaurantList from "./pages/Restaurant/RestaurantList";
 import MenuItemManagement from "./pages/Restaurant/MenuItemManagement";
 import MyRestaurants from "./pages/Restaurant/MyRestaurants";
 import AddRestaurant from "./pages/Restaurant/AddRestaurant";
+import AddMenuItem from './pages/Restaurant/AddMenuItem';
 
 import PaymentSuccessPage from './pages/Main/PaymentSuccessPage';
 import PaymentCancelPage from './pages/Main/PaymentSuccessPage';
@@ -169,6 +170,8 @@ function App() {
         <Route path="/restaurant/my-restaurants" element={<MyRestaurants />} />
         <Route path="/restaurant/add" element={<AddRestaurant />} />
         <Route path="/restaurant/dashboard/:id" element={<RestaurantManagementDashboard />} />
+        <Route path="/add-menu-item" element={<AddMenuItem />} />
+        <Route path="/restaurant/:restaurantId/add-menu-item" element={<AddMenuItem />} />
 
         <Route path="/restaurant/:id/orders" element={<RestaurantOrdersPage />} />
         {/* Order Update Page */}
