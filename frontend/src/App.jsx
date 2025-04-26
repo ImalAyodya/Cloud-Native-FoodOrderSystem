@@ -56,7 +56,7 @@ function App() {
         <Route path="/" element={<Root />} />
         <Route path="/login" element={<Login />} />
         <Route path='/register' element={<Register />} />
-        <Route path="/dashboard" element={<Home />} />
+        <Route path="/home" element={<Home />} />
         <Route path="/verification-sent" element={<VerifyEmail />} />
 
         
