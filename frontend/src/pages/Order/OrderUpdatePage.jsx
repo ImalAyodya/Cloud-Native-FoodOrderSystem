@@ -7,6 +7,10 @@ import PaymentSection from '../../components/Order/UpdateOrder/PaymentSection';
 import CancelOrderModal from '../../components/Order/CancelOrder';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js'; 
+import StripeContainer from '../../components/Payment/StripeContainer';
+import axios from 'axios';
 
 const OrderUpdatePage = () => {
   const { orderId } = useParams();
@@ -22,6 +26,9 @@ const OrderUpdatePage = () => {
   const [cancelReason, setCancelReason] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showStripePayment, setShowStripePayment] = useState(false);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState(0);
 
   // Create a persistent reference to track original item IDs
   const originalItemIds = React.useMemo(() => {
@@ -212,6 +219,19 @@ const OrderUpdatePage = () => {
     navigate('/myOrders');
   };
 
+  // Function to handle payment success
+  const handlePaymentSuccess = (paymentIntent) => {
+    toast.success('Payment successful!');
+    processOrderUpdate(paymentIntent.id);
+  };
+
+  // Function to handle payment error
+  const handlePaymentError = (errorMessage) => {
+    toast.error(`Payment failed: ${errorMessage}`);
+    setPaymentProcessing(false);
+  };
+
+  // Modified update order function to check for payment method
   const handleUpdateOrder = async () => {
     // Don't update if no changes have been made
     if (newlyAddedItems.length === 0 && removedOriginalItems.length === 0) {
@@ -219,19 +239,33 @@ const OrderUpdatePage = () => {
       return;
     }
     
+    // If payment method is Credit Card and we have new items, show Stripe payment
+    if (order.paymentMethod === 'Credit Card' && newlyAddedItems.length > 0) {
+      const newItemsTotal = calculateTotal(newlyAddedItems);
+      setPaymentAmount(newItemsTotal);
+      setShowStripePayment(true);
+      return;
+    }
+    
+    // For Cash on Delivery or no new items, proceed with update directly
+    await processOrderUpdate();
+  };
+
+  // Process the order update (with or without payment)
+  const processOrderUpdate = async (paymentId = null) => {
     setIsLoading(true);
     
     try {
-      // Prepare updated items data - include only remaining original items and newly added items
+      // Prepare updated items data
       const updatedItems = [
-        ...originalItems, // Original items that weren't removed
+        ...originalItems, 
         ...newlyAddedItems
       ];
       
       // Calculate new total amount
       const newTotalAmount = calculateTotal(updatedItems);
       
-      // Make API call to update order items
+      // Make API call to update order
       const response = await fetch(`http://localhost:5001/api/orders/${orderId}/items`, {
         method: 'PUT',
         headers: {
@@ -239,7 +273,8 @@ const OrderUpdatePage = () => {
         },
         body: JSON.stringify({ 
           items: updatedItems,
-          totalAmount: newTotalAmount
+          totalAmount: newTotalAmount,
+          paymentTransactionId: paymentId || undefined
         })
       });
       
@@ -248,24 +283,14 @@ const OrderUpdatePage = () => {
         throw new Error(errorData.message || 'Failed to update order');
       }
       
-      const data = await response.json();
-      console.log('Order updated successfully:', data);
-      
-      toast.success('Order updated successfully!', {
-        autoClose: 3000,
-        closeOnClick: true
-      });
-      
-      // Navigate back to orders page after short delay
+      toast.success('Order updated successfully!');
       setTimeout(() => navigate('/myOrders'), 2000);
       
     } catch (error) {
-      console.error('Error updating order:', error);
-      toast.error(`Update failed: ${error.message}`, {
-        autoClose: 5000
-      });
+      toast.error(`Update failed: ${error.message}`);
     } finally {
       setIsLoading(false);
+      setShowStripePayment(false);
     }
   };
 
@@ -695,6 +720,56 @@ const OrderUpdatePage = () => {
               orderNumber: orderId
             }}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Stripe Payment Modal */}
+      <AnimatePresence>
+        {showStripePayment && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 px-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-lg p-6 max-w-md w-full"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold">Payment for Added Items</h3>
+                {!paymentProcessing && (
+                  <button 
+                    onClick={() => setShowStripePayment(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+
+              <div className="mb-4 bg-blue-50 border border-blue-100 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-blue-800">New items total:</span>
+                  <span className="font-bold text-blue-800">${paymentAmount.toFixed(2)}</span>
+                </div>
+                <p className="text-xs text-blue-600">You'll only be charged for the newly added items.</p>
+              </div>
+
+              <StripeContainer 
+                amount={paymentAmount}
+                orderData={order}
+                onPaymentSuccess={handlePaymentSuccess}
+                onPaymentError={handlePaymentError}
+                setProcessing={setPaymentProcessing}
+                buttonText="Pay for Added Items"
+              />
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

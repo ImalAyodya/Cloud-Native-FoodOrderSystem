@@ -25,6 +25,9 @@ import Menu from "./pages/Main/Menu";
 import Checkout from "./pages/Main/CheckoutPage";
 import Resturent from "./pages/Main/Resturent";
 import LoginPage from "./pages/Main/Login";
+import RestaurantManagementDashboard from "./pages/Restaurant/RestaurantManagementDashboard";
+import RestaurantList from "./pages/Restaurant/RestaurantList";
+import MenuItemManagement from "./pages/Restaurant/MenuItemManagement";
 
 import PaymentSuccessPage from './pages/Main/PaymentSuccessPage';
 import PaymentCancelPage from './pages/Main/PaymentSuccessPage';
@@ -132,6 +135,15 @@ function App() {
         <Route path="/request-password-reset" element={<RequestPasswordReset />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         
+
+        <Route path="/restaurant/dashboard" element={<RestaurantManagementDashboard />} />
+        <Route path="/restaurant/list" element={<RestaurantList />} />
+        <Route path="/restaurant/:restaurantId/menu" element={<MenuItemManagement />} />
+
+        {/* Order Update Page */}
+        <Route path="/orders/update/:orderId" element={<OrderUpdatePage />} />
+
+
         {/* Payment routes */}
         <Route path="/payment/success" element={<PaymentSuccessPage />} />
         <Route path="/payment/cancel" element={<PaymentCancelPage />} />

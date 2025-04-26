@@ -169,3 +169,57 @@ exports.getPaymentStatus = async (req, res) => {
     });
   }
 };
+
+exports.createPaymentIntent = async (req, res) => {
+  try {
+    const { amount, orderData } = req.body;
+    
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid payment amount'
+      });
+    }
+    
+    if (!orderData) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing order data'
+      });
+    }
+    
+    // Create metadata based on whether this is an update payment or a new order
+    const metadata = orderData.isUpdate 
+      ? {
+          orderId: orderData.orderId || orderData.id,
+          customerEmail: orderData.customer?.email,
+          customerName: orderData.customer?.name,
+          paymentType: 'order_update'
+        }
+      : {
+          orderId: orderData.orderId || 'new-order',
+          customerEmail: orderData.customer.email,
+          customerName: orderData.customer.name,
+          paymentType: 'new_order'
+        };
+    
+    // Create a PaymentIntent with the order amount and currency
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount,
+      currency: 'usd',
+      metadata
+    });
+    
+    res.status(200).json({
+      success: true,
+      clientSecret: paymentIntent.client_secret
+    });
+  } catch (error) {
+    console.error('Error creating payment intent:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create payment',
+      error: error.message
+    });
+  }
+};
