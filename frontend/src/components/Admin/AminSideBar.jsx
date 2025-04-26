@@ -23,7 +23,8 @@ import {
   FaList,
   FaMapMarkerAlt,
   FaExclamationCircle,
-  FaStream
+  FaStream,
+  FaEnvelope
 } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import Swal from 'sweetalert2';
@@ -154,7 +155,14 @@ const AdminSidebar = ({ user }) => {
       icon: <FaMapMarkerAlt size={20} />, 
       path: '/admin/locations',
       badge: null
-    }
+    },
+    // Add this to your menuItems array in AdminSidebar.jsx
+    { 
+      name: 'Messages', 
+      icon: <FaEnvelope size={20} />, 
+      path: '/admin/contacts',
+      badge: null
+    },
   ];
 
   const secondaryMenuItems = [
