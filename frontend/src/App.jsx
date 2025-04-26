@@ -9,6 +9,7 @@ import MyOrders from "./pages/Main/MyOrders";
 import AdminDashboard from "./pages/Admin/Order/AdminDashboard";
 import AdminLayout from "./components/Admin/Order/AdminLayout";
 
+import Profile from "./pages/User/Profile";
 import Root from "./components/Root";
 import Login from "./pages/Main/Login";
 import Register from "./pages/Main/Register";
@@ -60,9 +61,10 @@ function App() {
 
         {/* <Route path="/" element={<Root />} /> */}
         <Route path="/" element={<Root />} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/login" element={<Login />} />
         <Route path='/register' element={<Register />} />
-        <Route path="/dashboard" element={<Home />} />
+        <Route path="/home" element={<Home />} />
         <Route path="/verification-sent" element={<VerifyEmail />} />
 
         
