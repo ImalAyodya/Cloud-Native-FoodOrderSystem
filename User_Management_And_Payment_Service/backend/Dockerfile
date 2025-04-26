@@ -19,4 +19,4 @@ ENV PORT=5000
 ENV NODE_ENV=production
 
 # Command to run the application
-CMD ["sh", "-c", "node seed.js && node server.js"]
+CMD ["sh", "-c", "node server.js"]
