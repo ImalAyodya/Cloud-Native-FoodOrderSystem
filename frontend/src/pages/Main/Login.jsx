@@ -7,7 +7,6 @@ import { FaEnvelope, FaLock, FaGoogle, FaUtensils } from 'react-icons/fa';
 import { MdRestaurantMenu, MdOutlineFoodBank, MdDeliveryDining } from 'react-icons/md';
 import { BiRestaurant } from 'react-icons/bi';
 import axios from 'axios';
-import { FaEnvelope, FaLock, FaGoogle } from 'react-icons/fa';
 import authService from '../../services/authService';
 
 const LoginPage = () => {
@@ -63,16 +62,10 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      const data = await authService.login(formData.email, formData.password);
+      // authService.login already handles setting tokens in localStorage
+      // and returns only response.data, not the full response object
+      const userData = await authService.login(formData.email, formData.password);
       
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('loggedInUser', JSON.stringify({
-        id: response.data.user._id,
-        name: response.data.user.name,
-        email: response.data.user.email,
-        role: response.data.user.role,
-      }));
-
       // Show success toast with custom styling
       toast.success('Login successful!', {
         icon: '🍽️',
@@ -81,9 +74,9 @@ const LoginPage = () => {
       
       // Redirect based on user role with slight delay for toast visibility
       setTimeout(() => {
-        if (response.data.user.role === 'admin') {
+        if (userData.user.role === 'admin') {
           navigate('/admin');
-        } else if (response.data.user.role === 'restaurant_admin') {
+        } else if (userData.user.role === 'restaurant_admin') {
           navigate('/restaurant/my-restaurants');
         } else {
           navigate('/'); 
@@ -92,9 +85,12 @@ const LoginPage = () => {
     } catch (error) {
       console.error('Login error:', error);
       
+      // Better error handling
       if (error.response) {
         const errorMessage = error.response.data?.message || 'Invalid credentials. Please try again.';
         toast.error(errorMessage);
+      } else if (error.request) {
+        toast.error('No response from server. Please check your internet connection.');
       } else {
         toast.error('Login failed. Please try again later.');
       }
