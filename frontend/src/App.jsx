@@ -15,7 +15,6 @@ import UserDashboard from "./pages/Admin/User/Dashboard";
 import UserManagement from "./pages/Admin/User/UserManagement";
 import ProtectedRoutes from "./utils/ProtectedRoutes";
 
-
 import AllOrders from "./pages/Admin/Order/AllOrders";
 import OrderUpdatePage from "./pages/Order/OrderUpdatePage";
 import Menu from "./pages/Main/Menu";
@@ -25,9 +24,12 @@ import LoginPage from "./pages/Main/Login";
 import RestaurantManagementDashboard from "./pages/Restaurant/RestaurantManagementDashboard";
 import RestaurantList from "./pages/Restaurant/RestaurantList";
 import MenuItemManagement from "./pages/Restaurant/MenuItemManagement";
+import MyRestaurants from "./pages/Restaurant/MyRestaurants";
+import AddRestaurant from "./pages/Restaurant/AddRestaurant";
 
 import PaymentSuccessPage from './pages/Main/PaymentSuccessPage';
 import PaymentCancelPage from './pages/Main/PaymentSuccessPage';
+import RestaurantOrdersPage from "./pages/ResturentOrder/ResturentOrders";
 
 
 function App() {
@@ -37,7 +39,7 @@ function App() {
 
         <Route path="/" element={<Root />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Home />} />
+        <Route path="/home" element={<Home />} />
 
         <Route path="/about" element={<AboutUs />} />
         <Route path="/contact" element={<ContactUs />} />
@@ -79,7 +81,11 @@ function App() {
         <Route path="/restaurant/dashboard" element={<RestaurantManagementDashboard />} />
         <Route path="/restaurant/list" element={<RestaurantList />} />
         <Route path="/restaurant/:restaurantId/menu" element={<MenuItemManagement />} />
+        <Route path="/restaurant/my-restaurants" element={<MyRestaurants />} />
+        <Route path="/restaurant/add" element={<AddRestaurant />} />
+        <Route path="/restaurant/dashboard/:id" element={<RestaurantManagementDashboard />} />
 
+        <Route path="/restaurant/:id/orders" element={<RestaurantOrdersPage />} />
         {/* Order Update Page */}
         <Route path="/orders/update/:orderId" element={<OrderUpdatePage />} />
 
