@@ -7,6 +7,8 @@ import { FaEnvelope, FaLock, FaGoogle, FaUtensils } from 'react-icons/fa';
 import { MdRestaurantMenu, MdOutlineFoodBank, MdDeliveryDining } from 'react-icons/md';
 import { BiRestaurant } from 'react-icons/bi';
 import axios from 'axios';
+import { FaEnvelope, FaLock, FaGoogle } from 'react-icons/fa';
+import authService from '../../services/authService';
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -61,7 +63,7 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', formData);
+      const data = await authService.login(formData.email, formData.password);
       
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('loggedInUser', JSON.stringify({
@@ -89,7 +91,13 @@ const LoginPage = () => {
       }, 1000);
     } catch (error) {
       console.error('Login error:', error);
-      toast.error(error.response?.data?.message || 'Failed to login. Please check your credentials.');
+      
+      if (error.response) {
+        const errorMessage = error.response.data?.message || 'Invalid credentials. Please try again.';
+        toast.error(errorMessage);
+      } else {
+        toast.error('Login failed. Please try again later.');
+      }
     } finally {
       setIsLoading(false);
     }
