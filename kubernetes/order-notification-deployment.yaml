@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-notification-deployment
+  labels:
+    app: order-notification
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order-notification
+  template:
+    metadata:
+      labels:
+        app: order-notification
+    spec:
+      containers:
+      - name: order-notification
+        image: order-notification-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5001
+        env:
+        - name: PORT
+          value: "5001"
+        - name: NODE_ENV
+          value: "production"
+        - name: MONGO_URI
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: mongo-order-uri
+        - name: EMAIL_USER
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: email-user
+        - name: EMAIL_PASS
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: email-pass
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
