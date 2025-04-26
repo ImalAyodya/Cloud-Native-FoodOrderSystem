@@ -7,6 +7,7 @@ const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 
 // Protected user routes
+//http://localhost:5000/api/users/me
 router.get('/me', auth, userController.getProfile);
 router.put('/me', auth, userController.updateProfile);
 router.patch('/me/password', auth, userController.updatePassword);
