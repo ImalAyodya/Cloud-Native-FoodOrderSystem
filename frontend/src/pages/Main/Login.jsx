@@ -79,7 +79,7 @@ const LoginPage = () => {
         } else if (userData.user.role === 'restaurant_admin') {
           navigate('/restaurant/my-restaurants');
         } else {
-          navigate('/'); 
+          navigate('/home'); 
         }
       }, 1000);
     } catch (error) {
