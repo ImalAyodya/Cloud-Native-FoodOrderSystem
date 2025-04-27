@@ -336,17 +336,74 @@ const RestaurantOrdersPage = () => {
     }
     
     if (error) {
+      // Check if the error is a 404 error (no orders found)
+      const is404Error = error.includes('404') || error.includes('not found');
+      
       return (
-        <div className="bg-red-50 p-6 rounded-xl text-center">
-          <div className="text-red-500 text-center mb-4 text-5xl">⚠️</div>
-          <h3 className="text-red-800 font-bold text-xl mb-2">Error Loading Orders</h3>
-          <p className="text-red-600 mb-6">{error}</p>
-          <button 
-            onClick={fetchOrders}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-          >
-            Try Again
-          </button>
+        <div className={`${is404Error ? 'bg-orange-50' : 'bg-red-50'} p-8 rounded-xl text-center max-w-3xl mx-auto`}>
+          <div className="mb-6">
+            {is404Error ? (
+              <img 
+                src="/images/empty-orders.svg" 
+                alt="No Orders Yet" 
+                className="w-48 h-48 mx-auto opacity-80"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "https://img.icons8.com/bubbles/100/000000/food-delivery.png";
+                }}
+              />
+            ) : (
+              <div className="text-red-500 text-center mb-4 text-5xl">⚠️</div>
+            )}
+          </div>
+          
+          {is404Error ? (
+            <>
+              <h3 className="text-orange-800 font-bold text-2xl mb-3">Your Order Dashboard Is Ready!</h3>
+              <p className="text-orange-700 mb-4 max-w-md mx-auto">
+                This is where all your restaurant orders will appear. You don't have any orders yet, but they'll show up here as customers place them.
+              </p>
+              <div className="mt-6 max-w-md mx-auto grid grid-cols-1 gap-4 text-left bg-white p-6 rounded-lg shadow-sm">
+                <h4 className="font-semibold text-gray-800 flex items-center">
+                  <span className="bg-orange-100 w-8 h-8 rounded-full flex items-center justify-center mr-3 text-orange-600">1</span>
+                  Make sure your menu is up to date
+                </h4>
+                <h4 className="font-semibold text-gray-800 flex items-center">
+                  <span className="bg-orange-100 w-8 h-8 rounded-full flex items-center justify-center mr-3 text-orange-600">2</span>
+                  Ensure your restaurant is visible and marked as "Open"
+                </h4>
+                <h4 className="font-semibold text-gray-800 flex items-center">
+                  <span className="bg-orange-100 w-8 h-8 rounded-full flex items-center justify-center mr-3 text-orange-600">3</span>
+                  Check back here when orders start coming in
+                </h4>
+              </div>
+              <button 
+                onClick={fetchOrders}
+                className="mt-6 px-6 py-3 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors flex items-center mx-auto"
+              >
+                <FaSync className="mr-2" /> Refresh Orders
+              </button>
+            </>
+          ) : (
+            <>
+              <h3 className="text-red-800 font-bold text-xl mb-2">Unable to Load Orders</h3>
+              <p className="text-red-600 mb-6">{error}</p>
+              <div className="flex justify-center space-x-4">
+                <button 
+                  onClick={fetchOrders}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
+                >
+                  <FaSync className="mr-2" /> Try Again
+                </button>
+                <button 
+                  onClick={() => window.location.href = "/restaurants/my-restaurants"}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                >
+                  Back to Restaurant Dashboard
+                </button>
+              </div>
+            </>
+          )}
         </div>
       );
     }

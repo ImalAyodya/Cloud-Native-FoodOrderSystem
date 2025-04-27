@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FaEnvelope, FaLock, FaGoogle, FaUtensils } from 'react-icons/fa';
 import { BiRestaurant } from 'react-icons/bi';
+import axios from 'axios';
 import { MdDeliveryDining } from 'react-icons/md';
 import authService from '../../services/authService';
 
@@ -61,9 +62,11 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      // Call authService login and store the response
-      const response = await authService.login(formData.email, formData.password);
-
+      // authService.login already handles setting tokens in localStorage
+      // and returns only response.data, not the full response object
+      const userData = await authService.login(formData.email, formData.password);
+      
+      // Show success toast with custom styling
       toast.success('Login successful!', {
         icon: '🍽️',
         progressStyle: { background: '#f97316' },
@@ -71,22 +74,23 @@ const LoginPage = () => {
       
       // Redirect based on user role with slight delay for toast visibility
       setTimeout(() => {
-        if (response.user.role === 'admin') {
+        if (userData.user.role === 'admin') {
           navigate('/admin');
-        } else if (response.user.role === 'restaurant_owner') {
-          navigate('/restaurant/dashboard');
-        } else if (response.user.role === 'customer') {
-          navigate('/dashboard');
+        } else if (userData.user.role === 'restaurant_admin') {
+          navigate('/restaurant/my-restaurants');
         } else {
-          navigate('/');
+          navigate('/home'); 
         }
       }, 1000);
     } catch (error) {
       console.error('Login error:', error);
       
+      // Better error handling
       if (error.response) {
         const errorMessage = error.response.data?.message || 'Invalid credentials. Please try again.';
         toast.error(errorMessage);
+      } else if (error.request) {
+        toast.error('No response from server. Please check your internet connection.');
       } else {
         toast.error('Login failed. Please try again later.');
       }

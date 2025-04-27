@@ -1,0 +1,64 @@
+version: '3'
+
+services:
+  restaurant-service:
+    build: ./Restaurant_Management_Service/backend
+    ports:
+      - "5003:5003"
+    environment:
+      - PORT=5003
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb+srv://sithmaka:sithmaka1122@cluster.pvqvoqf.mongodb.net/Order_DB?retryWrites=true&w=majority&appName=Cluster
+      - JWT_SECRET=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+      - JWT_EXPIRES_IN=7d
+    networks:
+      - food-order-network
+    restart: unless-stopped
+
+  user-management-service:
+    build: ./User_Management_And_Payment_Service/backend
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      - JWT_SECRET=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+      - JWT_EXPIRES_IN=7d
+      # Use Ayodya's database instead
+      - MONGO_URI=mongodb+srv://Ayodya:Ayodya@cluster0.csn4fag.mongodb.net/FoodOrderDB?retryWrites=true&w=majority&appName=Cluster0
+    networks:
+      - food-order-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+  order-notification-service:
+    build: ./Order_Mangement_And_Notification_Service/backend
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - NODE_ENV=production
+    networks:
+      - food-order-network
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+    - "5173:80"
+    depends_on:
+      - restaurant-service
+      - user-management-service
+      - order-notification-service
+    networks:
+      - food-order-network
+    restart: unless-stopped
+
+networks:
+  food-order-network:
+    driver: bridge

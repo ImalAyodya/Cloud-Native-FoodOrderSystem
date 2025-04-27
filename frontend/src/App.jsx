@@ -9,6 +9,7 @@ import MyOrders from "./pages/Main/MyOrders";
 import AdminDashboard from "./pages/Admin/Order/AdminDashboard";
 import AdminLayout from "./components/Admin/Order/AdminLayout";
 
+import Profile from "./pages/User/Profile";
 import Root from "./components/Root";
 import Login from "./pages/Main/Login";
 import Register from "./pages/Main/Register";
@@ -28,9 +29,12 @@ import LoginPage from "./pages/Main/Login";
 import RestaurantManagementDashboard from "./pages/Restaurant/RestaurantManagementDashboard";
 import RestaurantList from "./pages/Restaurant/RestaurantList";
 import MenuItemManagement from "./pages/Restaurant/MenuItemManagement";
+import MyRestaurants from "./pages/Restaurant/MyRestaurants";
+import AddRestaurant from "./pages/Restaurant/AddRestaurant";
 
 import PaymentSuccessPage from './pages/Main/PaymentSuccessPage';
 import PaymentCancelPage from './pages/Main/PaymentSuccessPage';
+import RestaurantOrdersPage from "./pages/ResturentOrder/ResturentOrders";
 
 import ContactTable from './components/Admin/Contact/ContactTable';
 
@@ -57,6 +61,7 @@ function App() {
 
         {/* <Route path="/" element={<Root />} /> */}
         <Route path="/" element={<Root />} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/login" element={<Login />} />
         <Route path='/register' element={<Register />} />
         <Route path="/home" element={<Home />} />
@@ -141,14 +146,41 @@ function App() {
         <Route path="/request-password-reset" element={<RequestPasswordReset />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         
+        <Route
+          path="/order/dashboard"
+          element={
+            <ProtectedRoutes requireRole={["admin"]}>
+              <AdminDashboard />
+            </ProtectedRoutes>
+          }
+        />
+        <Route 
+          path="user/dashboard" 
+          element={<ProtectedRoutes requireRole={["admin"]}>
+              <UserDashboard />
+          </ProtectedRoutes>} 
+        />
+        <Route path="user/management" element={<UserManagement />} />
+        <Route path="unauthorized" element={<p className="font bold text-3xl mt-20 ml-20">Unauthorized</p>} />
 
+          
+
+        {/* Admin Pages */}
+        <Route path="/admin" element={<AdminLayout />} />
+        <Route path="/admin/orders" element={<AllOrders />} />
+        <Route path="/order/dashboard" element={<AdminDashboard />} />
+
+        {/* Restaurant Management Pages */}
         <Route path="/restaurant/dashboard" element={<RestaurantManagementDashboard />} />
         <Route path="/restaurant/list" element={<RestaurantList />} />
         <Route path="/restaurant/:restaurantId/menu" element={<MenuItemManagement />} />
+        <Route path="/restaurant/my-restaurants" element={<MyRestaurants />} />
+        <Route path="/restaurant/add" element={<AddRestaurant />} />
+        <Route path="/restaurant/dashboard/:id" element={<RestaurantManagementDashboard />} />
 
+        <Route path="/restaurant/:id/orders" element={<RestaurantOrdersPage />} />
         {/* Order Update Page */}
         <Route path="/orders/update/:orderId" element={<OrderUpdatePage />} />
-
 
         {/* Payment routes */}
         <Route path="/payment/success" element={<PaymentSuccessPage />} />

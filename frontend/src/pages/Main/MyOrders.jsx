@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast, ToastContainer } from 'react-toastify';
-import { FaBoxOpen, FaSearch, FaTrash, FaTimes, FaEdit, FaHistory } from 'react-icons/fa';
+import { FaBoxOpen, FaSearch, FaTrash, FaTimes, FaEdit, FaHistory, FaUtensils, FaShoppingBag } from 'react-icons/fa';
 import Header from '../../components/Main/Header';
 import Footer from '../../components/Main/Footer';
 import OrderCard from '../../components/Order/OrderCard';
@@ -18,14 +18,33 @@ const MyOrders = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [animateCards, setAnimateCards] = useState(false);
   const [localOrders, setLocalOrders] = useState([]);
+  const [errorHandled, setErrorHandled] = useState(false);
 
   useEffect(() => {
-    if (!loading && orders.length > 0) {
+    if (!loading) {
       setAnimateCards(true);
-      setLocalOrders(orders);
-      console.log('Orders fetched:', orders);
+      setLocalOrders(orders || []);
+
+      if (orders && orders.length > 0) {
+        console.log('Orders fetched:', orders);
+      }
+
+      if (error && !errorHandled) {
+        const isNoOrdersError = error && (
+          error.includes('No orders found') || 
+          error.includes('not found') ||
+          error.toLowerCase().includes('empty')
+        );
+        
+        if (!isNoOrdersError) {
+          toast.error(error);
+        }
+        setErrorHandled(true);
+      }
+    } else {
+      setErrorHandled(false);
     }
-  }, [loading, orders]);
+  }, [loading, orders, error, errorHandled]);
 
   const handleFilterChange = (filter) => {
     setSelectedFilter(filter);
@@ -147,25 +166,65 @@ const MyOrders = () => {
     </div>
   );
 
-  const ErrorDisplay = ({ message }) => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-red-50 border border-red-200 rounded-xl p-8 text-center"
-    >
-      <div className="inline-flex justify-center items-center w-16 h-16 bg-red-100 rounded-full mb-4">
-        <FaBoxOpen className="text-red-500 text-2xl" />
-      </div>
-      <h3 className="text-lg font-bold text-red-800 mb-2">Unable to load orders</h3>
-      <p className="text-red-600">{message}</p>
-      <button
-        onClick={() => window.location.reload()}
-        className="mt-4 px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+  const ErrorDisplay = ({ message }) => {
+    const isNoOrdersError = message && (
+      message.includes('No orders found') || 
+      message.includes('not found') ||
+      message.toLowerCase().includes('empty')
+    );
+
+    if (isNoOrdersError) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white border border-gray-100 rounded-xl p-10 text-center shadow-md"
+        >
+          <div className="inline-flex justify-center items-center w-24 h-24 bg-orange-50 rounded-full mb-6">
+            <FaShoppingBag className="text-orange-400 text-4xl" />
+          </div>
+          <h3 className="text-2xl font-bold text-gray-800 mb-3">You haven't placed any orders yet</h3>
+          <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            Looks like you haven't made your first order with us. 
+            Browse our restaurants and discover delicious meals!
+          </p>
+          <Link to="/restaurants">
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all font-medium shadow-lg shadow-orange-200 flex items-center mx-auto"
+            >
+              <FaUtensils className="mr-2" />
+              Explore Restaurants
+            </motion.button>
+          </Link>
+        </motion.div>
+      );
+    }
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-red-50 border border-red-200 rounded-xl p-8 text-center"
       >
-        Try Again
-      </button>
-    </motion.div>
-  );
+        <div className="inline-flex justify-center items-center w-16 h-16 bg-red-100 rounded-full mb-4">
+          <FaBoxOpen className="text-red-500 text-2xl" />
+        </div>
+        <h3 className="text-lg font-bold text-red-800 mb-2">Unable to load orders</h3>
+        <p className="text-red-600">{message}</p>
+        <button
+          onClick={() => {
+            setErrorHandled(false);
+            window.location.reload();
+          }}
+          className="mt-4 px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+        >
+          Try Again
+        </button>
+      </motion.div>
+    );
+  };
 
   return (
     <>
@@ -228,6 +287,31 @@ const MyOrders = () => {
             <LoadingSkeleton />
           ) : error ? (
             <ErrorDisplay message={error} />
+          ) : !localOrders || localOrders.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white border border-gray-100 rounded-xl p-10 text-center shadow-md"
+            >
+              <div className="inline-flex justify-center items-center w-24 h-24 bg-orange-50 rounded-full mb-6">
+                <FaShoppingBag className="text-orange-400 text-4xl" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-3">You haven't placed any orders yet</h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                Looks like you haven't made your first order with us. 
+                Browse our restaurants and discover delicious meals!
+              </p>
+              <Link to="/restaurants">
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all font-medium shadow-lg shadow-orange-200 flex items-center mx-auto"
+                >
+                  <FaUtensils className="mr-2" />
+                  Explore Restaurants
+                </motion.button>
+              </Link>
+            </motion.div>
           ) : filteredOrders.length > 0 ? (
             <AnimatePresence>
               {animateCards && (
