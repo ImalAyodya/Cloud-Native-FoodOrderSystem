@@ -1,7 +1,7 @@
 // routes/assignmentRoutes.js
 const express = require('express');
 const router = express.Router();
-const assignmentController = require('../controllers/assignmentController');
+const assignmentController = require('../controllers/assignmentControler');
 
 // Start automatic assignment process
 router.post('/start', assignmentController.startAssignment);

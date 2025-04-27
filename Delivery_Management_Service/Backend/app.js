@@ -5,9 +5,7 @@ const dotenv = require('dotenv');
 const http = require('http');
 const socketIO = require('socket.io');
 const connectDB = require('./config/db');
-const driverRoutes = require('./routes/driverRoutes');
-const assignmentRoutes = require('./routes/assignmentRoutes');
-const assignmentService = require('./services/assignmentService');
+//const assignmentService = require('./src/services/assignmentService');
 
 // Load environment variables
 dotenv.config();
@@ -57,7 +55,7 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api/drivers', require('./src/routes/driverRoutes'));
 app.use('/api/deliveries', require('./src/routes/deliveryRoutes'));
-app.use('/api/assignment', require('./src/routes/assignmentRoutes'));
+//app.use('/api/assignment', require('./src/routes/assignmentRoutes'));
 
 
 // Health check endpoint
@@ -77,7 +75,7 @@ server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 
   // Start the automatic assignment process with default interval (10 seconds)
-  assignmentService.startAssignmentProcess();
+ // assignmentService.startAssignmentProcess();
 
 });
 
