@@ -31,6 +31,7 @@ import MenuItemManagement from "./pages/Restaurant/MenuItemManagement";
 import MyRestaurants from "./pages/Restaurant/MyRestaurants";
 import AddRestaurant from "./pages/Restaurant/AddRestaurant";
 import AddMenuItem from './pages/Restaurant/AddMenuItem';
+import RestaurantProfile from "./pages/Restaurant/RestaurantProfile";
 
 import PaymentSuccessPage from './pages/Main/PaymentSuccessPage';
 import PaymentCancelPage from './pages/Main/PaymentSuccessPage';
@@ -165,13 +166,14 @@ function App() {
 
         {/* Restaurant Management Pages */}
         <Route path="/restaurant/dashboard" element={<RestaurantManagementDashboard />} />
-        <Route path="/restaurant/list" element={<RestaurantList />} />
+        {/* <Route path="/restaurant/list" element={<RestaurantList />} /> */}
         <Route path="/restaurant/:restaurantId/menu" element={<MenuItemManagement />} />
         <Route path="/restaurant/my-restaurants" element={<MyRestaurants />} />
         <Route path="/restaurant/add" element={<AddRestaurant />} />
         <Route path="/restaurant/dashboard/:id" element={<RestaurantManagementDashboard />} />
-        <Route path="/add-menu-item" element={<AddMenuItem />} />
-        <Route path="/restaurant/:restaurantId/add-menu-item" element={<AddMenuItem />} />
+        {/* <Route path="/add-menu-item" element={<AddMenuItem />} />
+        <Route path="/restaurant/:restaurantId/add-menu-item" element={<AddMenuItem />} /> */}
+        <Route path="/restaurant/profile/:id" element={<RestaurantProfile />} />
 
         <Route path="/restaurant/:id/orders" element={<RestaurantOrdersPage />} />
         {/* Order Update Page */}

@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { fetchMenuItemsByRestaurant , deleteMenuItem } from '../../services/menuItemService';
+import { fetchMenuItemsByRestaurant, deleteMenuItem } from '../../services/menuItemService';
 import MenuItemForm from '../../components/Restaurant/MenuItemForm';
-import Header from '../../components/Main/Header';
-import Footer from '../../components/Main/Footer';
+import Header from '../../components/Restaurant/RestaurantHeader';
 import RestaurantSidebar from '../../components/Restaurant/RestaurantSidebar';
 
 const MenuItemManagement = () => {
   const { restaurantId } = useParams();
   const [menuItems, setMenuItems] = useState([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingMenuItem, setEditingMenuItem] = useState(null); // Track the menu item being edited
+  const [editingMenuItem, setEditingMenuItem] = useState(null);
+
+  const BACKEND_BASE_URL = 'http://localhost:5003';
 
   const fetchMenuItems = async () => {
     try {
@@ -30,26 +31,26 @@ const MenuItemManagement = () => {
   const handleAddMenuItem = (newMenuItem) => {
     setMenuItems([...menuItems, newMenuItem]);
     setIsFormOpen(false);
-    fetchMenuItems(); // Refresh the list
+    fetchMenuItems();
   };
 
   const handleEditMenuItem = (menuItem) => {
-    setEditingMenuItem(menuItem); // Set the menu item to edit
-    setIsFormOpen(true); // Open the form
+    setEditingMenuItem(menuItem);
+    setIsFormOpen(true);
   };
 
   const handleUpdateMenuItem = (updatedMenuItem) => {
     setMenuItems(menuItems.map(item => (item._id === updatedMenuItem._id ? updatedMenuItem : item)));
-    setEditingMenuItem(null); // Clear the editing state
-    setIsFormOpen(false); // Close the form
-    fetchMenuItems(); // Refresh the list
+    setEditingMenuItem(null);
+    setIsFormOpen(false);
+    fetchMenuItems();
   };
 
   const handleDeleteMenuItem = async (menuItemId) => {
     if (window.confirm('Are you sure you want to delete this menu item?')) {
       try {
         await deleteMenuItem(menuItemId);
-        setMenuItems(menuItems.filter(item => item._id !== menuItemId)); // Remove from local state
+        setMenuItems(menuItems.filter(item => item._id !== menuItemId));
         alert('Menu item deleted successfully!');
       } catch (error) {
         console.error('Error deleting menu item:', error);
@@ -59,21 +60,15 @@ const MenuItemManagement = () => {
   };
 
   const handleCloseForm = () => {
-    setEditingMenuItem(null); // Clear the editing state
-    setIsFormOpen(false); // Close the form
+    setEditingMenuItem(null);
+    setIsFormOpen(false);
   };
 
   return (
     <div className="flex">
-      {/* Sidebar */}
       <RestaurantSidebar />
-
-      {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen">
-        {/* Header */}
         <Header isNotHome={true} />
-
-        {/* Menu Items Section */}
         <main className="flex-1 p-6 bg-gray-100">
           <h1 className="text-2xl font-bold mb-4">Menu Items</h1>
           <button
@@ -84,10 +79,10 @@ const MenuItemManagement = () => {
           </button>
 
           {isFormOpen && (
-            <div className="mb-8"> {/* Add margin to separate the form from the list */}
+            <div className="mb-8">
               <MenuItemForm
                 restaurantId={restaurantId}
-                menuItem={editingMenuItem} // Pass the menu item to edit (null for adding)
+                menuItem={editingMenuItem}
                 onSubmit={editingMenuItem ? handleUpdateMenuItem : handleAddMenuItem}
                 onClose={handleCloseForm}
               />
@@ -99,21 +94,27 @@ const MenuItemManagement = () => {
               menuItems.map((item) => (
                 <div
                   key={item._id}
-                  className="relative bg-cover bg-center shadow-md rounded-md p-4 text-white"
-                  style={{
-                    backgroundImage: `url(${item.image || 'https://via.placeholder.com/300'})`, // Use item.image or a placeholder
-                    height: '250px', // Increased height for better visibility
-                  }}
+                  className="relative shadow-md rounded-md p-4 text-black"
+                  style={{ height: '250px' }}
                 >
-                  {/* Overlay for better text visibility */}
-                  <div className="absolute inset-0 bg-orange bg-opacity-5 rounded-md"></div> {/* Reduced opacity */}
+                  {/* Pseudo-element for background image with opacity */}
+                  <div
+                    className="absolute inset-0 bg-cover bg-center rounded-md"
+                    style={{
+                      backgroundImage: `url(${item.image ? `${BACKEND_BASE_URL}${item.image}` : 'https://via.placeholder.com/300'})`,
+                      opacity: 0.5, // Adjust opacity here (0 to 1)
+                    }}
+                  ></div>
+
+                  {/* Overlay */}
+                  <div className="absolute inset-0 bg-orange bg-opacity-5 rounded-md"></div>
 
                   {/* Content */}
                   <div className="relative z-10 flex flex-col justify-between h-full">
                     <div>
-                      <h2 className="text-lg font-bold drop-shadow-md">{item.name}</h2> {/* Added drop shadow */}
-                      <p className="text-sm drop-shadow-md">{item.category}</p> {/* Added drop shadow */}
-                      <p className="text-lg font-semibold drop-shadow-md">${item.price.toFixed(2)}</p> {/* Added drop shadow */}
+                      <h2 className="text-lg font-bold drop-shadow-md">{item.name}</h2>
+                      <p className="text-sm drop-shadow-md">{item.category}</p>
+                      <p className="text-lg font-semibold drop-shadow-md">${item.price.toFixed(2)}</p>
                     </div>
                     <div className="mt-2 flex space-x-2">
                       <button
@@ -137,9 +138,7 @@ const MenuItemManagement = () => {
             )}
           </div>
         </main>
-
-        {/* Footer */}
-        <Footer />
+        
       </div>
     </div>
   );

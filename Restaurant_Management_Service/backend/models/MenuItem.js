@@ -45,18 +45,6 @@ const menuItemSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
-  gallery: [
-    {
-      type: String,
-      trim: true,
-    },
-  ],
-  tags: [
-    {
-      type: String,
-      trim: true,
-    },
-  ],
   ingredients: [
     {
       type: String,
@@ -68,12 +56,6 @@ const menuItemSchema = new mongoose.Schema({
       type: Number,
       min: 0,
     },
-    allergens: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
   },
   dietary: {
     isVegetarian: {
@@ -88,10 +70,6 @@ const menuItemSchema = new mongoose.Schema({
       type: Boolean,
       default: false,
     },
-  },
-  featured: {
-    type: Boolean,
-    default: false,
   },
   preparationTime: {
     type: Number,

@@ -43,7 +43,7 @@ app.use(express.json());
 app.use(cors({ origin: 'http://localhost:5173', credentials: true })); // Allow requests from frontend
 
 // Serve static files from the 'uploads' directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static('uploads'));
 
 // Connect to MongoDB
 connectDB();

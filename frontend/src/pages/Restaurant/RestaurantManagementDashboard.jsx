@@ -193,7 +193,7 @@ const RestaurantManagementDashboardContent = () => {
         >
           <h3 className="text-lg font-bold text-gray-800 mb-4">Manage Your Restaurant</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link to={`/restaurant/list`} className="bg-white border border-gray-200 rounded-xl p-4 flex items-center hover:shadow-md transition-shadow">
+            <Link to={`/restaurant/profile/${id}`} className="bg-white border border-gray-200 rounded-xl p-4 flex items-center hover:shadow-md transition-shadow">
               <div className="w-12 h-12 rounded-lg bg-orange-100 flex items-center justify-center text-orange-500 mr-4">
                 <FaStore />
               </div>

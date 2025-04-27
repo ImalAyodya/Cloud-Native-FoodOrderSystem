@@ -493,7 +493,7 @@ const MenuItemForm = ({ menuItem, restaurantId, onClose, onSubmit }) => {
     formDataUpload.append('image', file);
 
     try {
-      const response = await axios.post('http://localhost:5003/api/menu-items/upload-image', formDataUpload, {
+      const response = await axios.post('http://localhost:5003/api/menu/upload-image', formDataUpload, {
         headers: {
           'Content-Type': 'multipart/form-data',
           // 'Authorization': 'Bearer your-mock-jwt-token-here', // Replace with your actual token
