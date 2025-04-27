@@ -204,6 +204,7 @@ function App() {
         {/* Order update page */}
         <Route path="unauthorized" element={<p className="font bold text-3xl mt-20 ml-20">Unauthorized</p>} />
       
+      <Route path="*" element={<p className="font bold text-3xl mt-20 ml-20">Page Not Found</p>} /> 
       </Routes>
     </Router>
   );
