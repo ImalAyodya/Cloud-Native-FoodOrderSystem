@@ -27,8 +27,6 @@ class AuthService {
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('loggedInUser');
-    
-    // Remove authorization header
     this.removeAuthHeader();
   }
 
@@ -42,7 +40,7 @@ class AuthService {
 
   isAuthenticated() {
     const token = this.getToken();
-    return !!token; // Convert to boolean
+    return !!token;
   }
 
   setAuthHeader(token) {
@@ -55,7 +53,6 @@ class AuthService {
     delete axios.defaults.headers.common['Authorization'];
   }
 
-  // Initialize auth header from storage (call this on app startup)
   initializeAuth() {
     const token = this.getToken();
     if (token) {

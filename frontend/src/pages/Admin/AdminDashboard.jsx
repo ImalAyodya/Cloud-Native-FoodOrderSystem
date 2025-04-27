@@ -1,214 +1,276 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast, Toaster } from 'react-hot-toast';
-import { FaShoppingBag, FaUsers, FaUtensils, FaMoneyBillWave, FaStore } from 'react-icons/fa';
-import { MdRestaurantMenu } from 'react-icons/md';
+import axios from 'axios';
+import { 
+  FaUsers, FaUtensils, FaShoppingBag, FaMoneyBillWave, 
+  FaUserTie, FaMotorcycle, FaCalendarCheck, FaExclamationTriangle,
+  FaCheck, FaHourglassHalf, FaTruck, FaClipboardCheck
+} from 'react-icons/fa';
+
 import AdminSidebar from '../../components/Admin/AminSideBar';
-import OrderStatusChart from '../../components/Admin/Order/OrderStatusChart';
-import RevenueChart from '../../components/Admin/Order/RevenueChart';
-import RecentOrders from '../../components/Admin/Order/RecentOrders';
+import OrderStatusChart from '../../components/Admin/Dashboard/OrderStatusChart';
+import RevenueChart from '../../components/Admin/Dashboard/RevenueChart';
+import RecentOrders from '../../components/Admin/Dashboard/RecentOrders';
+import RecentContacts from '../../components/Admin/Dashboard/RecentContacts';
 
 const AdminDashboard = () => {
-  const [dashboardData, setDashboardData] = useState({
-    // Orders data
-    totalOrders: 0,
-    totalRevenue: 0,
-    pendingOrders: 0,
-    completedOrders: 0,
-    cancelledOrders: 0,
-    deliveredOrders: 0,
-    recentOrders: [],
-    ordersByStatus: [],
-    dailyRevenue: [],
-
-    // Users data
-    totalUsers: 0,
-    customerUsers: 0,
-    restaurantAdmins: 0,
-    newUsersToday: 0,
-
-    // Restaurant data
-    totalRestaurants: 0,
-    activeRestaurants: 0,
-    pendingRestaurants: 0,
-    totalMenuItems: 0
-  });
-
+  // State variables for all dashboard data
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [dashboardData, setDashboardData] = useState({
+    // User stats
+    totalUsers: 0,
+    activeUsers: 0,
+    inactiveUsers: 0,
+    usersByRole: {
+      customers: 0,
+      restaurantOwners: 0,
+      deliveryPersons: 0,
+      admins: 0
+    },
+    
+    // Restaurant stats
+    totalRestaurants: 0,
+    activeRestaurants: 0,
+    
+    // Order stats
+    totalOrders: 0,
+    ordersByStatus: [],
+    recentOrders: [],
+    totalRevenue: 0,
+    monthlyRevenue: [],
+    
+    // Contact stats
+    pendingContacts: 0,
+    recentContacts: []
+  });
 
+  // Fetch all data when component mounts
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchAllData = async () => {
       setIsLoading(true);
       try {
-        // Get token from localStorage
+        // Get authentication token
         const token = localStorage.getItem('token');
         if (!token) {
           throw new Error('Authentication token not found');
         }
-
-        const headers = {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        };
-
-        // 1. Fetch Orders Data
-        const ordersResponse = await fetch('http://localhost:5001/api/orders/', {
-          headers
-        });
-
-        if (!ordersResponse.ok) {
-          throw new Error('Failed to fetch orders data');
-        }
-
-        const ordersData = await ordersResponse.json();
-        const orders = Array.isArray(ordersData) ? ordersData :
-          (ordersData.orders || []);
-
-        // 2. Fetch Users Data - Using the correct endpoint
-        const usersResponse = await fetch('http://localhost:5000/api/admin/users', {
-          headers
-        });
-
-        if (!usersResponse.ok) {
-          throw new Error('Failed to fetch users data');
-        }
-
-        const usersData = await usersResponse.json();
-        const users = usersData.users || [];
-
-        // 3. Fetch Restaurants Data - Using the correct endpoint
-        const restaurantsResponse = await fetch('http://localhost:5003/api/restaurant/get');
-
-        if (!restaurantsResponse.ok) {
-          throw new Error('Failed to fetch restaurants data');
-        }
-
-        const restaurantsData = await restaurantsResponse.json();
-        const restaurants = restaurantsData.restaurants || [];
-
-        // 4. Fetch Menu Items Data
-        const menuItemsResponse = await fetch('http://localhost:5003/api/menu/get');
-
-        if (!menuItemsResponse.ok) {
-          throw new Error('Failed to fetch menu items data');
-        }
-
-        const menuItemsData = await menuItemsResponse.json();
-        const menuItems = menuItemsData.menuItems || [];
-
-        // Calculate metrics
-        // Orders metrics
-        const totalRevenue = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-        const pendingOrders = orders.filter(order => order.orderStatus === 'Pending').length;
-        const deliveredOrders = orders.filter(order => order.orderStatus === 'Delivered').length;
-        const completedOrders = orders.filter(order => order.orderStatus === 'Completed').length;
-        const cancelledOrders = orders.filter(order => order.orderStatus === 'Cancelled').length;
-
-        // Get recent orders - last 5
-        const recentOrders = [...orders].sort((a, b) =>
-          new Date(b.placedAt || b.createdAt || 0) - new Date(a.placedAt || a.createdAt || 0)
-        ).slice(0, 5);
-
-        // Orders by status for pie chart
-        const statusList = ['Pending', 'Confirmed', 'Preparing', 'Ready for Pickup',
-          'On the way', 'Delivered', 'Cancelled', 'Failed', 'Refunded', 'Completed'];
-        const ordersByStatus = statusList.map(status => ({
-          status,
-          count: orders.filter(order => order.orderStatus === status).length
-        })).filter(item => item.count > 0);
-
-        // Daily revenue for the last 7 days
-        const last7Days = Array(7).fill().map((_, i) => {
-          const date = new Date();
-          date.setDate(date.getDate() - i);
-          return date.toISOString().split('T')[0];
-        }).reverse();
-
-        const dailyRevenue = last7Days.map(date => {
-          const filteredOrders = orders.filter(order => {
-            const orderDate = order.placedAt || order.createdAt;
-            return orderDate && new Date(orderDate).toISOString().split('T')[0] === date;
-          });
-
-          return {
-            date,
-            revenue: filteredOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
-            orders: filteredOrders.length
-          };
-        });
-
-        // Users metrics
-        const totalUsers = users.length;
-        const customerUsers = users.filter(user => user.role === 'customer').length;
-        const restaurantAdmins = users.filter(user => user.role === 'restaurant_admin').length;
-
-        // Calculate new users today
-        const today = new Date().toISOString().split('T')[0];
-        const newUsersToday = users.filter(user => {
-          const createdDate = user.createdAt || user.registeredAt;
-          return createdDate && new Date(createdDate).toISOString().split('T')[0] === today;
-        }).length;
-
-        // Restaurants metrics
-        const totalRestaurants = restaurants.length;
-        const activeRestaurants = restaurants.filter(restaurant => restaurant.isAvailable && restaurant.status === 'active').length;
-        const pendingRestaurants = restaurants.filter(restaurant => restaurant.status === 'pending').length;
-        const totalMenuItems = menuItems.length;
-
-        // Update dashboard state
+        
+        const headers = { Authorization: `Bearer ${token}` };
+        
+        // Fetch Users Data
+        const usersData = await fetchUsersData(headers);
+        
+        // Fetch Restaurant Data
+        const restaurantsData = await fetchRestaurantsData(headers);
+        
+        // Fetch Orders Data
+        const ordersData = await fetchOrdersData(headers);
+        
+        // Fetch Contacts Data
+        const contactsData = await fetchContactsData(headers);
+        
+        // Combine all data
         setDashboardData({
-          // Orders data
-          totalOrders: orders.length,
-          totalRevenue,
-          pendingOrders,
-          deliveredOrders,
-          completedOrders,
-          cancelledOrders,
-          recentOrders,
-          ordersByStatus,
-          dailyRevenue,
-
-          // Users data
-          totalUsers,
-          customerUsers,
-          restaurantAdmins,
-          newUsersToday,
-
-          // Restaurant data
-          totalRestaurants,
-          activeRestaurants,
-          pendingRestaurants,
-          totalMenuItems
+          ...usersData,
+          ...restaurantsData,
+          ...ordersData,
+          ...contactsData
         });
-
+        
         setIsLoading(false);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
-        setError(error.message);
+        setError(error.message || 'Failed to load dashboard data');
         setIsLoading(false);
-        toast.error(`Failed to load dashboard data: ${error.message}`);
+        toast.error(`Error: ${error.message || 'Failed to load dashboard data'}`);
       }
     };
-
-    fetchDashboardData();
+    
+    fetchAllData();
   }, []);
 
-  // Mock user for sidebar
-  const user = {
-    name: 'Admin User',
-    email: 'admin@digidine.com'
+  // Helper function to fetch users data
+  const fetchUsersData = async (headers) => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/admin/users', { headers });
+      
+      if (!response.data.success) {
+        throw new Error('Failed to fetch users data');
+      }
+      
+      const users = response.data.users || [];
+      
+      // Calculate user statistics
+      const activeUsers = users.filter(user => user.isActive).length;
+      const inactiveUsers = users.filter(user => !user.isActive).length;
+      
+      const customers = users.filter(user => user.role === 'customer').length;
+      const restaurantOwners = users.filter(user => user.role === 'restaurant_owner').length;
+      const deliveryPersons = users.filter(user => user.role === 'delivery_person').length;
+      const admins = users.filter(user => user.role === 'admin').length;
+      
+      return {
+        totalUsers: users.length,
+        activeUsers,
+        inactiveUsers,
+        usersByRole: {
+          customers,
+          restaurantOwners,
+          deliveryPersons,
+          admins
+        }
+      };
+    } catch (error) {
+      console.error('Error fetching users data:', error);
+      toast.error('Failed to fetch users data');
+      return {
+        totalUsers: 0,
+        activeUsers: 0,
+        inactiveUsers: 0,
+        usersByRole: { customers: 0, restaurantOwners: 0, deliveryPersons: 0, admins: 0 }
+      };
+    }
+  };
+
+  // Helper function to fetch restaurants data
+  const fetchRestaurantsData = async (headers) => {
+    try {
+      const response = await axios.get('http://localhost:5003/api/restaurant', { headers });
+      
+      const restaurants = response.data || [];
+      const activeRestaurants = Array.isArray(restaurants) 
+        ? restaurants.filter(restaurant => restaurant.isAvailable).length
+        : 0;
+      
+      return {
+        totalRestaurants: Array.isArray(restaurants) ? restaurants.length : 0,
+        activeRestaurants,
+        restaurants: Array.isArray(restaurants) ? restaurants.slice(0, 5) : []
+      };
+    } catch (error) {
+      console.error('Error fetching restaurants data:', error);
+      toast.error('Failed to fetch restaurants data');
+      return {
+        totalRestaurants: 0,
+        activeRestaurants: 0,
+        restaurants: []
+      };
+    }
+  };
+
+  // Helper function to fetch orders data
+  const fetchOrdersData = async (headers) => {
+    try {
+      const response = await axios.get('http://localhost:5001/api/orders', { headers });
+      
+      const orders = response.data || [];
+      
+      // Make sure orders is an array
+      const ordersArray = Array.isArray(orders) ? orders : 
+                          (orders.orders && Array.isArray(orders.orders)) ? orders.orders : [];
+      
+      // Calculate orders by status
+      const statusList = [
+        'Pending', 'Confirmed', 'Preparing', 'Ready for Pickup', 
+        'On the way', 'Delivered', 'Completed', 'Cancelled'
+      ];
+      
+      const ordersByStatus = statusList.map(status => ({
+        status,
+        count: ordersArray.filter(order => order.orderStatus === status).length
+      })).filter(item => item.count > 0);
+      
+      // Calculate total revenue
+      const totalRevenue = ordersArray.reduce((sum, order) => {
+        return sum + (Number(order.totalAmount) || 0);
+      }, 0);
+      
+      // Get recent orders
+      const recentOrders = [...ordersArray]
+        .sort((a, b) => new Date(b.placedAt || b.createdAt) - new Date(a.placedAt || a.createdAt))
+        .slice(0, 5);
+      
+      // Calculate monthly revenue
+      const now = new Date();
+      const monthlyRevenue = Array(6).fill().map((_, i) => {
+        const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthName = month.toLocaleString('default', { month: 'short' });
+        
+        const ordersInMonth = ordersArray.filter(order => {
+          const orderDate = new Date(order.placedAt || order.createdAt);
+          return orderDate.getMonth() === month.getMonth() && 
+                 orderDate.getFullYear() === month.getFullYear();
+        });
+        
+        const revenue = ordersInMonth.reduce((sum, order) => sum + (Number(order.totalAmount) || 0), 0);
+        
+        return { month: monthName, revenue };
+      }).reverse();
+      
+      return {
+        totalOrders: ordersArray.length,
+        ordersByStatus,
+        recentOrders,
+        totalRevenue,
+        monthlyRevenue
+      };
+    } catch (error) {
+      console.error('Error fetching orders data:', error);
+      toast.error('Failed to fetch orders data');
+      return {
+        totalOrders: 0,
+        ordersByStatus: [],
+        recentOrders: [],
+        totalRevenue: 0,
+        monthlyRevenue: []
+      };
+    }
+  };
+
+  // Helper function to fetch contacts data
+  const fetchContactsData = async (headers) => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/contact', { headers });
+      
+      if (!response.data.success) {
+        throw new Error('Failed to fetch contacts data');
+      }
+      
+      const contacts = response.data.data || [];
+      const pendingContacts = contacts.filter(contact => contact.status === 'pending').length;
+      
+      // Get recent contacts
+      const recentContacts = [...contacts]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5);
+      
+      return {
+        pendingContacts,
+        recentContacts
+      };
+    } catch (error) {
+      console.error('Error fetching contacts data:', error);
+      toast.error('Failed to fetch contacts data');
+      return {
+        pendingContacts: 0,
+        recentContacts: []
+      };
+    }
   };
 
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-gray-50">
-        <AdminSidebar user={user} />
-        <div className="flex-1 lg:ml-[280px] flex justify-center items-center">
-          <div className="flex flex-col items-center">
-            <div className="w-16 h-16 border-t-4 border-orange-500 border-solid rounded-full animate-spin"></div>
-            <p className="mt-4 text-gray-600">Loading dashboard data...</p>
+      <div className="flex h-screen bg-gray-100">
+        <AdminSidebar />
+        <div className="flex-1 p-8 lg:ml-64">
+          <div className="flex justify-center items-center h-full">
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+              <p className="mt-4 text-gray-600 font-medium">Loading dashboard data...</p>
+            </div>
           </div>
         </div>
       </div>
@@ -218,19 +280,23 @@ const AdminDashboard = () => {
   // Error state
   if (error) {
     return (
-      <div className="flex h-screen bg-gray-50">
-        <AdminSidebar user={user} />
-        <div className="flex-1 lg:ml-[280px] flex justify-center items-center">
-          <div className="bg-white p-8 rounded-xl shadow max-w-md text-center">
-            <div className="text-red-500 text-5xl mb-4">⚠️</div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Something went wrong</h2>
-            <p className="text-gray-600 mb-6">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-            >
-              Try Again
-            </button>
+      <div className="flex h-screen bg-gray-100">
+        <AdminSidebar />
+        <div className="flex-1 p-8 lg:ml-64">
+          <div className="flex justify-center items-center h-full">
+            <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
+              <div className="text-red-500 text-5xl mb-4">
+                <FaExclamationTriangle className="mx-auto" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Error Loading Dashboard</h2>
+              <p className="text-gray-600 mb-6">{error}</p>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -238,188 +304,294 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <AdminSidebar user={user} />
-      <div className="flex-1 overflow-auto lg:ml-[280px]">
-        <div className="container mx-auto px-4 py-8">
-          <div className="mb-8">
-            <motion.h1
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="text-3xl font-bold text-gray-800"
-            >
-              Dashboard
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-              className="text-gray-500"
-            >
-              Welcome to DigiDine admin dashboard
-            </motion.p>
+    <div className="flex h-screen bg-gray-100">
+      <AdminSidebar />
+      
+      <div className="flex-1 overflow-auto p-8 lg:ml-64">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-8"
+        >
+          <h1 className="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
+          <p className="text-gray-500">Welcome to DigiDine Master Control Panel</p>
+        </motion.div>
+
+        {/* Key Statistics Cards */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+        >
+          {/* Users Card */}
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-500 text-sm font-medium">Total Users</p>
+                <h3 className="text-3xl font-bold text-gray-800 mt-1">{dashboardData.totalUsers}</h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  <span className="text-green-500">{dashboardData.activeUsers}</span> active, 
+                  <span className="text-red-500 ml-1">{dashboardData.inactiveUsers}</span> inactive
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-500">
+                <FaUsers size={20} />
+              </div>
+            </div>
           </div>
 
-          {/* Main Stats Overview */}
-          <motion.div
+          {/* Restaurants Card */}
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-500 text-sm font-medium">Restaurants</p>
+                <h3 className="text-3xl font-bold text-gray-800 mt-1">{dashboardData.totalRestaurants}</h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  <span className="text-green-500">{dashboardData.activeRestaurants}</span> active restaurants
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-orange-500">
+                <FaUtensils size={20} />
+              </div>
+            </div>
+          </div>
+
+          {/* Orders Card */}
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-500 text-sm font-medium">Total Orders</p>
+                <h3 className="text-3xl font-bold text-gray-800 mt-1">{dashboardData.totalOrders}</h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  {dashboardData.ordersByStatus.length > 0 && 
+                    <span className="text-yellow-500">
+                      {dashboardData.ordersByStatus.find(o => o.status === 'Pending')?.count || 0} pending
+                    </span>
+                  }
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-500">
+                <FaShoppingBag size={20} />
+              </div>
+            </div>
+          </div>
+
+          {/* Revenue Card */}
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-500 text-sm font-medium">Total Revenue</p>
+                <h3 className="text-3xl font-bold text-gray-800 mt-1">
+                  ${dashboardData.totalRevenue.toFixed(2)}
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  Lifetime earnings
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-500">
+                <FaMoneyBillWave size={20} />
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* User Role Stats */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+        >
+          {/* Customers */}
+          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-500 mr-3">
+                <FaUsers size={16} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Customers</p>
+                <p className="text-xl font-bold text-gray-800">{dashboardData.usersByRole.customers}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Restaurant Owners */}
+          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-500 mr-3">
+                <FaUserTie size={16} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Restaurant Owners</p>
+                <p className="text-xl font-bold text-gray-800">{dashboardData.usersByRole.restaurantOwners}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Delivery Personnel */}
+          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-500 mr-3">
+                <FaMotorcycle size={16} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Delivery Personnel</p>
+                <p className="text-xl font-bold text-gray-800">{dashboardData.usersByRole.deliveryPersons}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Admins */}
+          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-500 mr-3">
+                <FaUserTie size={16} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Administrators</p>
+                <p className="text-xl font-bold text-gray-800">{dashboardData.usersByRole.admins}</p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Order Status Stats */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+        >
+          {/* Pending Orders */}
+          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-500 mr-3">
+                <FaHourglassHalf size={16} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Pending Orders</p>
+                <p className="text-xl font-bold text-gray-800">
+                  {dashboardData.ordersByStatus.find(o => o.status === 'Pending')?.count || 0}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Confirmed Orders */}
+          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-500 mr-3">
+                <FaCheck size={16} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Confirmed Orders</p>
+                <p className="text-xl font-bold text-gray-800">
+                  {dashboardData.ordersByStatus.find(o => o.status === 'Confirmed')?.count || 0}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Ready for Pickup */}
+          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-500 mr-3">
+                <FaTruck size={16} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Ready for Pickup</p>
+                <p className="text-xl font-bold text-gray-800">
+                  {dashboardData.ordersByStatus.find(o => o.status === 'Ready for Pickup')?.count || 0}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Completed */}
+          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-500 mr-3">
+                <FaClipboardCheck size={16} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Completed Orders</p>
+                <p className="text-xl font-bold text-gray-800">
+                  {dashboardData.ordersByStatus.find(o => o.status === 'Completed')?.count || 0}
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Order Status Chart */}
+          <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
           >
-            {/* Orders Stats */}
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-800">Orders</h3>
-                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-500">
-                  <FaShoppingBag size={18} />
-                </div>
-              </div>
-              <p className="text-3xl font-bold text-gray-800 mb-2">{dashboardData.totalOrders}</p>
-              <div className="grid grid-cols-2 gap-2 mt-4">
-                <div className="bg-gray-50 p-2 rounded">
-                  <p className="text-xs text-gray-500">Pending</p>
-                  <p className="font-bold text-orange-500">{dashboardData.pendingOrders}</p>
-                </div>
-                <div className="bg-gray-50 p-2 rounded">
-                  <p className="text-xs text-gray-500">Completed</p>
-                  <p className="font-bold text-green-500">{dashboardData.completedOrders}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Users Stats */}
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-800">Users</h3>
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-500">
-                  <FaUsers size={18} />
-                </div>
-              </div>
-              <p className="text-3xl font-bold text-gray-800 mb-2">{dashboardData.totalUsers}</p>
-              <div className="grid grid-cols-2 gap-2 mt-4">
-                <div className="bg-gray-50 p-2 rounded">
-                  <p className="text-xs text-gray-500">Customers</p>
-                  <p className="font-bold text-blue-500">{dashboardData.customerUsers}</p>
-                </div>
-                <div className="bg-gray-50 p-2 rounded">
-                  <p className="text-xs text-gray-500">Restaurant Admins</p>
-                  <p className="font-bold text-purple-500">{dashboardData.restaurantAdmins}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Restaurants Stats */}
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-800">Restaurants</h3>
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-500">
-                  <FaStore size={18} />
-                </div>
-              </div>
-              <p className="text-3xl font-bold text-gray-800 mb-2">{dashboardData.totalRestaurants}</p>
-              <div className="grid grid-cols-2 gap-2 mt-4">
-                <div className="bg-gray-50 p-2 rounded">
-                  <p className="text-xs text-gray-500">Active</p>
-                  <p className="font-bold text-green-500">{dashboardData.activeRestaurants}</p>
-                </div>
-                <div className="bg-gray-50 p-2 rounded">
-                  <p className="text-xs text-gray-500">Pending</p>
-                  <p className="font-bold text-yellow-500">{dashboardData.pendingRestaurants}</p>
-                </div>
-              </div>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Orders by Status</h2>
+            <div className="h-64">
+              <OrderStatusChart data={dashboardData.ordersByStatus} />
             </div>
           </motion.div>
 
-          {/* Detailed Stats Cards */}
-          <motion.div
+          {/* Revenue Chart */}
+          <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.2 }}
-            className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
           >
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-500 text-sm font-medium">Total Revenue</p>
-                  <h3 className="text-3xl font-bold text-gray-800 mt-1">
-                    ${dashboardData.totalRevenue.toFixed(2)}
-                  </h3>
-                </div>
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-500">
-                  <FaMoneyBillWave size={20} />
-                </div>
-              </div>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Monthly Revenue</h2>
+            <div className="h-64">
+              <RevenueChart data={dashboardData.monthlyRevenue} />
             </div>
-
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-500 text-sm font-medium">New Users Today</p>
-                  <h3 className="text-3xl font-bold text-gray-800 mt-1">{dashboardData.newUsersToday}</h3>
-                </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-500">
-                  <FaUsers size={20} />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-500 text-sm font-medium">Menu Items</p>
-                  <h3 className="text-3xl font-bold text-gray-800 mt-1">{dashboardData.totalMenuItems}</h3>
-                </div>
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-500">
-                  <MdRestaurantMenu size={20} />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-500 text-sm font-medium">Delivered Orders</p>
-                  <h3 className="text-3xl font-bold text-gray-800 mt-1">{dashboardData.deliveredOrders}</h3>
-                </div>
-                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-orange-500">
-                  <FaShoppingBag size={20} />
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-            >
-              
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.3 }}
-            >
-              
-            </motion.div>
-          </div>
-
-          {/* Recent Orders */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.4 }}
-          >
-            
           </motion.div>
         </div>
+
+        {/* Recent Activity Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recent Orders */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+            className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800">Recent Orders</h2>
+              <a href="/admin/orders" className="text-sm text-orange-500 hover:text-orange-600">View all</a>
+            </div>
+            <RecentOrders orders={dashboardData.recentOrders} />
+          </motion.div>
+
+          {/* Recent Contacts */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+            className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800">Recent Contacts</h2>
+              <div className="flex items-center">
+                <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full mr-2">
+                  {dashboardData.pendingContacts} pending
+                </span>
+                <a href="/admin/contacts" className="text-sm text-orange-500 hover:text-orange-600">View all</a>
+              </div>
+            </div>
+            <RecentContacts contacts={dashboardData.recentContacts} />
+          </motion.div>
+        </div>
+
+        <Toaster position="bottom-right" />
       </div>
-      <Toaster position="bottom-right" />
     </div>
   );
 };

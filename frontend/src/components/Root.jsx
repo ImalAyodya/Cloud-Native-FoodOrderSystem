@@ -48,7 +48,7 @@ const Root = () => {
         } else if (user.role === 'restaurant_owner') {
           navigate('/restaurant/dashboard');
         } else if (user.role === 'delivery_person') {
-          navigate('/delivery/dashboard');
+          navigate('/delivery/home');
         } else if (user.role === 'customer') {
           navigate('/dashboard');
         } else {

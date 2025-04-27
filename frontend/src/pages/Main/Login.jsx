@@ -4,9 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FaEnvelope, FaLock, FaGoogle, FaUtensils } from 'react-icons/fa';
-import { MdRestaurantMenu, MdOutlineFoodBank, MdDeliveryDining } from 'react-icons/md';
 import { BiRestaurant } from 'react-icons/bi';
 import axios from 'axios';
+import { MdDeliveryDining } from 'react-icons/md';
 import authService from '../../services/authService';
 
 const LoginPage = () => {

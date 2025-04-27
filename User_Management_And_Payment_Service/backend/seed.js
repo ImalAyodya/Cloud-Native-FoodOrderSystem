@@ -8,10 +8,10 @@ dotenv.config();
 const register = async () => {
     try {
         connectDB(); // Connect to MongoDB
-        const hashPassword = await bcrypt.hash("owner",10);
+        const hashPassword = await bcrypt.hash("admin",10);
         const newUser = new User({
-            name: 'Restaurent Owner',
-            email: 'owner@digidine.com',
+            name: 'System Admin',
+            email: 'sysadmin@digidine.com',
             password: hashPassword,
             phoneNo: '1234567890',
             address: '123 Admin St, City, Country',
