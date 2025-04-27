@@ -6,8 +6,9 @@ import AboutUs from "./pages/Main/AboutUs";
 import ContactUs from "./pages/Main/ContactUs";
 import Cart from "./pages/Main/Cart";
 import MyOrders from "./pages/Main/MyOrders";
-import AdminDashboard from "./pages/Admin/Order/AdminDashboard";
+import AdminOrderDashboard from "./pages/Admin/Order/AdminOrderDashboard";
 import AdminLayout from "./components/Admin/Order/AdminLayout";
+import AdminDashboard from "./pages/Admin/AdminDashboard";
 
 import Profile from "./pages/User/Profile";
 import Root from "./components/Root";
@@ -104,7 +105,7 @@ function App() {
         } />
         <Route path="/order/dashboard" element={
           <ProtectedRoutes requireRole={["admin"]}>
-            <AdminDashboard />
+            <AdminOrderDashboard />
           </ProtectedRoutes>
         } />
         {/* <Route path="/user/dashboard" element={
@@ -144,10 +145,11 @@ function App() {
           path="/order/dashboard"
           element={
             <ProtectedRoutes requireRole={["admin"]}>
-              <AdminDashboard />
+              <AdminOrderDashboard />
             </ProtectedRoutes>
           }
         />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route 
           path="user/dashboard" 
           element={<ProtectedRoutes requireRole={["admin"]}>
@@ -162,7 +164,7 @@ function App() {
         {/* Admin Pages */}
         <Route path="/admin" element={<AdminLayout />} />
         <Route path="/admin/orders" element={<AllOrders />} />
-        <Route path="/order/dashboard" element={<AdminDashboard />} />
+        <Route path="/order/dashboard" element={<AdminOrderDashboard />} />
 
         {/* Restaurant Management Pages */}
         <Route path="/restaurant/dashboard" element={<RestaurantManagementDashboard />} />

@@ -8,7 +8,7 @@ import OrderStatusChart from '../../../components/Admin/Order/OrderStatusChart';
 import RevenueChart from '../../../components/Admin/Order/RevenueChart';
 import AdminSidebar from '../../../components/Admin/AminSideBar';
 
-const AdminDashboard = () => {
+const AdminOrderDashboard = () => {
   const [dashboardData, setDashboardData] = useState({
     totalOrders: 0,
     totalRevenue: 0,
@@ -316,4 +316,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
+export default AdminOrderDashboard;
