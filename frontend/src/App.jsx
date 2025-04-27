@@ -26,7 +26,7 @@ import Checkout from "./pages/Main/CheckoutPage";
 import Resturent from "./pages/Main/Resturent";
 import LoginPage from "./pages/Main/Login";
 import RestaurantManagementDashboard from "./pages/Restaurant/RestaurantManagementDashboard";
-import RestaurantList from "./pages/Restaurant/RestaurantList";
+// import RestaurantList from "./pages/Restaurant/RestaurantList";
 import MenuItemManagement from "./pages/Restaurant/MenuItemManagement";
 import MyRestaurants from "./pages/Restaurant/MyRestaurants";
 import AddRestaurant from "./pages/Restaurant/AddRestaurant";
@@ -171,8 +171,8 @@ function App() {
         <Route path="/restaurant/my-restaurants" element={<MyRestaurants />} />
         <Route path="/restaurant/add" element={<AddRestaurant />} />
         <Route path="/restaurant/dashboard/:id" element={<RestaurantManagementDashboard />} />
-        {/* <Route path="/add-menu-item" element={<AddMenuItem />} />
-        <Route path="/restaurant/:restaurantId/add-menu-item" element={<AddMenuItem />} /> */}
+        <Route path="/add-menu-item" element={<AddMenuItem />} />
+        <Route path="/restaurant/:restaurantId/add-menu-item" element={<AddMenuItem />} />
         <Route path="/restaurant/profile/:id" element={<RestaurantProfile />} />
 
         <Route path="/restaurant/:id/orders" element={<RestaurantOrdersPage />} />

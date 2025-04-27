@@ -1,15 +1,30 @@
 const Restaurant = require('../models/Restaurant');
 const mongoose = require('mongoose'); // Added mongoose for ObjectId validation
+const path = require('path');
 
 // Create new restaurant
 const addRestaurant = async (req, res) => {
   try {
-    // Remove dependency on req.user.id
-    const newRestaurant = new Restaurant({
-      ...req.body
-      // ownerId should now be provided in the request body
-    });
-    
+    let restaurantData = req.body;
+
+    // Handle file uploads if present
+    if (req.files) {
+      const imageUrls = {};
+      
+      if (req.files.logo) {
+        imageUrls.logo = `/uploads/${req.files.logo[0].filename}`;
+      }
+      if (req.files.banner) {
+        imageUrls.banner = `/uploads/${req.files.banner[0].filename}`;
+      }
+      
+      restaurantData = {
+        ...restaurantData,
+        images: imageUrls
+      };
+    }
+
+    const newRestaurant = new Restaurant(restaurantData);
     const restaurant = await newRestaurant.save();
     res.status(201).json({ success: true, restaurant });
   } catch (error) {
@@ -55,81 +70,43 @@ const getRestaurantById = async (req, res) => {
   }
 };
 
-// // Update restaurant
-// const updateRestaurant = async (req, res) => {
-//   try {
-//     // Validate restaurant ID
-//     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-//       return res.status(400).json({ success: false, message: 'Invalid restaurant ID' });
-//     }
-
-//     // Find the restaurant
-//     const restaurant = await Restaurant.findById(req.params.id);
-//     if (!restaurant) {
-//       return res.status(404).json({ success: false, message: 'Restaurant not found' });
-//     }
-
-//     // Authorization check
-//     if (restaurant.ownerId.toString() !== req.user.id && req.user.role !== 'admin') {
-//       return res.status(403).json({ success: false, message: 'Not authorized' });
-//     }
-
-//     // Validate request body
-//     if (!req.body.name || !req.body.address || !req.body.contact?.phone) {
-//       return res.status(400).json({ success: false, message: 'Missing required fields' });
-//     }
-
-//     // Update the restaurant
-//     const updatedRestaurant = await Restaurant.findByIdAndUpdate(
-//       req.params.id,
-//       { $set: req.body },
-//       { new: true, runValidators: true } // Ensure validation is applied
-//     );
-
-//     res.status(200).json({ success: true, restaurant: updatedRestaurant });
-//   } catch (error) {
-//     console.error('Error updating restaurant:', error); // Log the full error
-//     res.status(500).json({ success: false, message: 'Internal Server Error' });
-//   }
-// };
-
 const updateRestaurant = async (req, res) => {
   try {
-    // Validate restaurant ID
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ success: false, message: 'Invalid restaurant ID' });
     }
 
-    // Find the restaurant
     const restaurant = await Restaurant.findById(req.params.id);
     if (!restaurant) {
       return res.status(404).json({ success: false, message: 'Restaurant not found' });
     }
 
-    // Skip authorization check for now
-    // if (restaurant.ownerId.toString() !== req.user.id && req.user.role !== 'admin') {
-    //   return res.status(403).json({ success: false, message: 'Not authorized' });
-    // }
+    let updateData = { ...req.body };
+    delete updateData.ownerId;
 
-    // Validate request body
-    if (!req.body.name || !req.body.address || !req.body.contact?.phone) {
-      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    // Handle file uploads if present
+    if (req.files) {
+      const imageUrls = { ...restaurant.images }; // Keep existing images
+      
+      if (req.files.logo) {
+        imageUrls.logo = `/uploads/${req.files.logo[0].filename}`;
+      }
+      if (req.files.banner) {
+        imageUrls.banner = `/uploads/${req.files.banner[0].filename}`;
+      }
+      
+      updateData.images = imageUrls;
     }
 
-    // Create update object, excluding ownerId
-    const updateData = { ...req.body };
-    delete updateData.ownerId; // Prevent updating ownerId
-
-    // Update the restaurant
     const updatedRestaurant = await Restaurant.findByIdAndUpdate(
       req.params.id,
       { $set: updateData },
-      { new: true, runValidators: false } // Disable validation temporarily
+      { new: true, runValidators: true }
     );
 
     res.status(200).json({ success: true, restaurant: updatedRestaurant });
   } catch (error) {
-    console.error('Error updating restaurant:', error.message, error.stack); // Log detailed error
+    console.error('Error updating restaurant:', error);
     res.status(500).json({ success: false, message: 'Internal Server Error', error: error.message });
   }
 };
@@ -167,19 +144,30 @@ const getAvailability = async (req, res) => {
   }
 };
 
-// Delete restaurant
 // const deleteRestaurant = async (req, res) => {
 //   try {
 //     const restaurant = await Restaurant.findById(req.params.id);
-    
-//     if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found' });
-//     if (restaurant.ownerId.toString() !== req.user.id && req.user.role !== 'admin') 
-//       return res.status(403).json({ success: false, message: 'Not authorized' });
-      
+//     if (!restaurant) {
+//       return res.status(404).json({ success: false, message: 'Restaurant not found' });
+//     }
+
+//     // Delete associated images
+//     if (restaurant.images) {
+//       Object.values(restaurant.images).forEach(imagePath => {
+//         if (imagePath) {
+//           const fullPath = path.join(__dirname, '..', imagePath);
+//           if (fs.existsSync(fullPath)) {
+//             fs.unlinkSync(fullPath);
+//           }
+//         }
+//       });
+//     }
+
 //     await Restaurant.findByIdAndDelete(req.params.id);
 //     res.status(200).json({ success: true, message: 'Restaurant deleted' });
 //   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
+//     console.error('Error deleting restaurant:', error);
+//     res.status(500).json({ success: false, message: 'Internal Server Error', error: error.message });
 //   }
 // };
 
