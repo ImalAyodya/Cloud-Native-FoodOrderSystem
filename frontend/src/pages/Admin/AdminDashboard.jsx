@@ -137,17 +137,29 @@ const AdminDashboard = () => {
   // Helper function to fetch restaurants data
   const fetchRestaurantsData = async (headers) => {
     try {
-      const response = await axios.get('http://localhost:5003/api/restaurant', { headers });
+      const response = await axios.get('http://localhost:5003/api/restaurant/get', { headers });
       
-      const restaurants = response.data || [];
-      const activeRestaurants = Array.isArray(restaurants) 
-        ? restaurants.filter(restaurant => restaurant.isAvailable).length
-        : 0;
+      // Extract restaurants from the response
+      // Handle both formats: {restaurants: [...]} or directly [...]
+      const restaurants = response.data.restaurants || response.data || [];
+      
+      // Ensure we're working with an array
+      const restaurantsArray = Array.isArray(restaurants) ? restaurants : [];
+      
+      // Calculate active restaurants 
+      const activeRestaurants = restaurantsArray.filter(restaurant => 
+        restaurant.isAvailable === true || restaurant.status === 'active'
+      ).length;
+      
+      // Log to debug
+      console.log('Restaurants response:', response.data);
+      console.log('Extracted restaurants:', restaurantsArray);
+      console.log('Active restaurants:', activeRestaurants);
       
       return {
-        totalRestaurants: Array.isArray(restaurants) ? restaurants.length : 0,
+        totalRestaurants: restaurantsArray.length,
         activeRestaurants,
-        restaurants: Array.isArray(restaurants) ? restaurants.slice(0, 5) : []
+        restaurants: restaurantsArray.slice(0, 5) // Top 5 for display
       };
     } catch (error) {
       console.error('Error fetching restaurants data:', error);
