@@ -5,6 +5,9 @@ const dotenv = require('dotenv');
 const http = require('http');
 const socketIO = require('socket.io');
 const connectDB = require('./config/db');
+const driverRoutes = require('./routes/driverRoutes');
+const assignmentRoutes = require('./routes/assignmentRoutes');
+const assignmentService = require('./services/assignmentService');
 
 // Load environment variables
 dotenv.config();
@@ -17,12 +20,16 @@ const server = http.createServer(app);
 const io = socketIO(server, {
   cors: {
     origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE']
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
   }
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  credentials: true
+}));
 app.use(express.json());
 app.use(morgan('dev'));
 
@@ -50,6 +57,8 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api/drivers', require('./src/routes/driverRoutes'));
 app.use('/api/deliveries', require('./src/routes/deliveryRoutes'));
+app.use('/api/assignment', require('./src/routes/assignmentRoutes'));
+
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -62,9 +71,14 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Server error' });
 });
 
+
 const PORT = process.env.PORT || 5002;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+
+  // Start the automatic assignment process with default interval (10 seconds)
+  assignmentService.startAssignmentProcess();
+
 });
 
-module.exports = { app, server }; 
+module.exports = { app, server };
