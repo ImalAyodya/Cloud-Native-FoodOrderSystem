@@ -37,6 +37,7 @@ import PaymentCancelPage from './pages/Main/PaymentSuccessPage';
 import RestaurantOrdersPage from "./pages/ResturentOrder/ResturentOrders";
 
 import ContactTable from './components/Admin/Contact/ContactTable';
+import MainAdminDashboard from './pages/Admin/AdminDashboard'
 
 
 import ContactManagement from './pages/Admin/Contact/ContactManagement';
@@ -94,7 +95,7 @@ function App() {
         {/* Admin routes */}
         <Route path="/admin" element={
           <ProtectedRoutes requireRole={["admin"]}>
-            <AdminLayout />
+            <MainAdminDashboard />
           </ProtectedRoutes>
         } />
         <Route path="/admin/orders" element={

@@ -27,6 +27,7 @@
     "react-router-dom": "^7.4.1",
     "react-three-fiber": "^6.0.13",
     "react-toastify": "^11.0.5",
+    "recharts": "^2.15.3",
     "sweetalert2": "^11.17.2",
     "tailwindcss": "^4.1.1"
   },
