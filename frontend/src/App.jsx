@@ -166,6 +166,8 @@ function App() {
         <Route path="user/management" element={<UserManagement />} />
         <Route path="unauthorized" element={<p className="font bold text-3xl mt-20 ml-20">Unauthorized</p>} />
 
+        <Route path="/admin/contacts" element={<ContactTable />} />
+        <Route path="/admin/contacts/:id" element={<ContactDetail />} />
           
 
         {/* Admin Pages */}
