@@ -16,8 +16,12 @@ app.get('/', (req, res) => {
 // Import and use routes
 const orderRoutes = require('./routes/OrderRoute');
 const orderStatusRoutes = require('./routes/OrderStatusRoutes');
+const emailRoutes = require('./routes/emailRoutes');
+const smsRoutes = require('./routes/smsRoutes'); 
+app.use('/api/email', emailRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/orders', orderStatusRoutes);
+app.use('/api', smsRoutes);
 
 const PORT = process.env.PORT;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
