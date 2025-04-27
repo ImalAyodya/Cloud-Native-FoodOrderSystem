@@ -110,18 +110,7 @@ const AdminSidebar = ({ user }) => {
         { name: 'Administrators', path: '/admin/users/administrators' },
       ]
     },
-    { 
-      name: 'Analytics', 
-      icon: <FaChartPie size={20} />, 
-      path: '/admin/analytics',
-      badge: null,
-      subMenu: [
-        { name: 'Sales Overview', path: '/admin/analytics/sales' },
-        { name: 'Restaurant Performance', path: '/admin/analytics/restaurants' },
-        { name: 'User Activity', path: '/admin/analytics/users' },
-        { name: 'Reports', path: '/admin/analytics/reports' },
-      ]
-    },
+    
     { 
       name: 'Payments', 
       icon: <FaMoneyBillWave size={20} />, 
@@ -144,52 +133,23 @@ const AdminSidebar = ({ user }) => {
         { name: 'Tracking', path: '/admin/delivery/tracking' },
       ]
     },
-    { 
-      name: 'Reviews', 
-      icon: <FaStar size={20} />, 
-      path: '/admin/reviews',
-      badge: null
-    },
-    { 
-      name: 'Locations', 
-      icon: <FaMapMarkerAlt size={20} />, 
-      path: '/admin/locations',
-      badge: null
-    },
-    // Add this to your menuItems array in AdminSidebar.jsx
-    { 
-      name: 'Messages', 
-      icon: <FaEnvelope size={20} />, 
+    {
+      name: 'Contact',
+      icon: <FaEnvelope size={20} />,
       path: '/admin/contacts',
-      badge: null
+      
+      subMenu: [
+        { name: 'All Messages', path: '/admin/contacts' },
+        { name: 'Unresolved', path: '/admin/contacts/unresolved' },
+        { name: 'Resolved', path: '/admin/contacts/resolved' }
+      ]
     },
   ];
 
   const secondaryMenuItems = [
-    { 
-      name: 'Notifications', 
-      icon: <FaBell size={20} />, 
-      path: '/admin/notifications',
-      badge: unreadNotifications || null,
-      onClick: () => {}
-    },
-    { 
-      name: 'Settings', 
-      icon: <FaCog size={20} />, 
-      path: '/admin/settings',
-      onClick: () => {},
-      subMenu: [
-        { name: 'System Settings', path: '/admin/settings/system' },
-        { name: 'User Preferences', path: '/admin/settings/preferences' },
-        { name: 'Security', path: '/admin/settings/security' },
-      ]
-    },
-    { 
-      name: 'Help & Support', 
-      icon: <FaQuestion size={20} />, 
-      path: '/admin/support',
-      onClick: () => {}
-    },
+    
+    
+    
     { 
       name: 'Logout', 
       icon: <FaSignOutAlt size={20} />, 
