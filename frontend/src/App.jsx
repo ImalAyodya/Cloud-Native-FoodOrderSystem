@@ -129,6 +129,12 @@ function App() {
             <EditUser />
           </ProtectedRoutes>
         } />
+
+        <Route path="/user/me" element={
+          <ProtectedRoutes requireRole={["customer"]}>
+            <UserProfile />
+          </ProtectedRoutes>
+        } />
         
         {/* Public Authentication Routes */}
         <Route path="/verify-email" element={<VerifyEmail />} />
