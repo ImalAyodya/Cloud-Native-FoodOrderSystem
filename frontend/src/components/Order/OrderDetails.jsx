@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FaClock,
@@ -18,11 +18,167 @@ import {
   FaMoneyBill,
   FaShieldAlt,
   FaTruck,
-  FaIdCard
+  FaIdCard,
+  FaPhone
 } from 'react-icons/fa';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import socketService from '../../services/socketService';
 import OrderTracker from './OrderTracker';
 
+// Fix Leaflet icon issues
+const DefaultIcon = L.icon({
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
+
+// Custom marker icons
+const driverIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+const destinationIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
 const OrderDetails = ({ order, onClose }) => {
+  const [driverLocation, setDriverLocation] = useState(null);
+  const [isTrackingEnabled, setIsTrackingEnabled] = useState(false);
+  const [isPolling, setIsPolling] = useState(false);
+  const [fullOrderDetails, setFullOrderDetails] = useState(null);
+
+  // Function to fetch order details via REST API
+  const fetchOrderDetails = async (orderId) => {
+    try {
+      const response = await fetch(`http://localhost:5001/api/orders/orders/${orderId}`);
+      
+      if (!response.ok) {
+        console.warn(`Failed to fetch order details (Status: ${response.status})`);
+        return null;
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.order) {
+        console.log("✅ Successfully fetched order details via polling");
+        setFullOrderDetails(data.order);
+        
+        // If we have driver location info, update it
+        if (data.order.driverCurrentLocation?.latitude && 
+            data.order.driverCurrentLocation?.longitude) {
+          setDriverLocation([
+            data.order.driverCurrentLocation.latitude,
+            data.order.driverCurrentLocation.longitude
+          ]);
+          
+          console.log("📍 Updated driver location from polling");
+        }
+        
+        return data.order;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching order details:', error);
+      return null;
+    }
+  };
+
+  // Subscribe to real-time location updates when viewing orders that are being delivered
+  useEffect(() => {
+    if (!order || !order.orderId || !['On the way', 'Ready for Pickup'].includes(order.orderStatus)) {
+      return;
+    }
+
+    // Initialize with current location from order if available
+    if (order.driverCurrentLocation?.latitude && order.driverCurrentLocation?.longitude) {
+      setDriverLocation([order.driverCurrentLocation.latitude, order.driverCurrentLocation.longitude]);
+      // Since we at least have a stored location, indicate some form of tracking is available
+      setIsTrackingEnabled(true);
+    }
+
+    // Try connecting to socket for real-time updates
+    try {
+      const socket = socketService.getSocket();
+      
+      if (socket) {
+        console.log("Attempting to track order:", order.orderId);
+        
+        // Try to join the tracking room for this order
+        socket.emit('track-order', order.orderId);
+        
+        if (socket.connected) {
+          console.log("Socket connected, setting up live tracking");
+          setIsTrackingEnabled(true);
+          
+          // Listen for driver location updates
+          socket.on('driver_location_update', (data) => {
+            if (data.orderId === order.orderId && data.driverLocation) {
+              console.log("Received location update:", data.driverLocation);
+              setDriverLocation([
+                data.driverLocation.latitude,
+                data.driverLocation.longitude
+              ]);
+            }
+          });
+          
+          return () => {
+            socket.off('driver_location_update');
+          };
+        } else {
+          console.log("Socket not connected, using static tracking info");
+          // Socket exists but not connected - use existing location data
+        }
+      }
+    } catch (error) {
+      console.error("Socket error in order tracking:", error);
+      // Continue with static information even if socket fails
+    }
+  }, [order]);
+
+  // Add useEffect to periodically poll for updates
+  useEffect(() => {
+    // Only poll for active orders that can change
+    if (!order || !order.orderId || 
+        !['On the way', 'Ready for Pickup', 'Preparing', 'Confirmed'].includes(order.orderStatus)) {
+      return;
+    }
+    
+    console.log("📊 Starting polling for order updates:", order.orderId);
+    setIsPolling(true);
+    
+    // Immediately fetch once
+    fetchOrderDetails(order.orderId);
+    
+    // Then set up interval
+    const intervalId = setInterval(() => {
+      fetchOrderDetails(order.orderId);
+    }, 10000); // Poll every 10 seconds
+    
+    return () => {
+      console.log("🛑 Stopping order polling");
+      clearInterval(intervalId);
+      setIsPolling(false);
+    };
+  }, [order?.orderId, order?.orderStatus]);
+
   // Calculate subtotal correctly by summing all item prices * quantities
   const calculateSubtotal = () => {
     if (!order || !order.items || !Array.isArray(order.items)) return 0;
@@ -178,6 +334,79 @@ const OrderDetails = ({ order, onClose }) => {
             </div>
           )}
 
+          {/* Updated Driver Information Section */}
+          {(order.diliveryDriverId || order.driverInfo || (fullOrderDetails?.diliveryDriverId || fullOrderDetails?.driverInfo)) && (
+            <div className="mb-8 bg-blue-50 border border-blue-100 rounded-xl p-6">
+              <div className="flex items-center gap-2 mb-4 text-blue-600">
+                <FaTruck />
+                <h3 className="font-bold text-lg">Delivery Information</h3>
+              </div>
+              
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-700">Driver Details</h4>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-500">
+                    <FaUser size={20} />
+                  </div>
+                  <div>
+                    <p className="font-medium">
+                      {/* Use data from either source */}
+                      {fullOrderDetails?.driverInfo?.name || 
+                      order.driverInfo?.name || 
+                      (fullOrderDetails?.diliveryDriverId || order.diliveryDriverId ? 'Assigned Driver' : 'Pending Assignment')}
+                    </p>
+                    {(fullOrderDetails?.driverInfo?.vehicleType || order.driverInfo?.vehicleType) && (
+                      <p className="text-sm text-gray-500">
+                        {fullOrderDetails?.driverInfo?.vehicleType || order.driverInfo?.vehicleType}
+                        {(fullOrderDetails?.driverInfo?.licensePlate || order.driverInfo?.licensePlate) && 
+                        ` • ${fullOrderDetails?.driverInfo?.licensePlate || order.driverInfo?.licensePlate}`}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                
+                {(fullOrderDetails?.driverInfo?.phone || order.driverInfo?.phone) ? (
+                  <a 
+                    href={`tel:${fullOrderDetails?.driverInfo?.phone || order.driverInfo?.phone}`} 
+                    className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors mt-2"
+                  >
+                    <FaPhone className="mr-2" size={14} /> Call Driver
+                  </a>
+                ) : (fullOrderDetails?.diliveryDriverId || order.diliveryDriverId) ? (
+                  <span className="inline-block text-sm text-gray-500 mt-2">
+                    Driver contact information not available
+                  </span>
+                ) : null}
+                
+                {/* Show connection status */}
+                <div className="mt-3 text-sm">
+                  <p className="text-gray-500">
+                    {isPolling ? 
+                      "Automatically refreshing delivery information..." : 
+                      "Static delivery information"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Driver info for completed orders */}
+          {orderStatus === 'Delivered' && order.diliveryDriverId && (
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <div className="flex justify-center items-center">
+                <div className="mr-3 bg-green-100 rounded-full p-2">
+                  <FaTruck className="text-green-500" />
+                </div>
+                <p className="text-sm text-gray-600">
+                  Delivered by <span className="font-medium">{order.driverInfo?.name || 'Delivery Driver'}</span>
+                  {order.statusTimestamps?.Delivered && (
+                    <span className="ml-1">on {formatDate(order.statusTimestamps.Delivered)}</span>
+                  )}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Cancellation Details - Displayed only if order was cancelled */}
           {orderStatus.toLowerCase() === 'cancelled' && (
             <motion.div 
@@ -294,6 +523,80 @@ const OrderDetails = ({ order, onClose }) => {
               <p className="text-gray-600">{customerData.address || order.deliveryAddress || 'Address not available'}</p>
             </div>
 
+            {/* Map Section - Show either live tracking or static map */}
+            <div className="mt-6">
+              <h4 className="font-medium text-gray-700 mb-3">
+                {isTrackingEnabled ? 'Live Tracking' : 'Delivery Location'}
+              </h4>
+              <div className="h-64 rounded-lg overflow-hidden border border-gray-200">
+                {(driverLocation || isTrackingEnabled) ? (
+                  <MapContainer 
+                    center={driverLocation || [6.9271, 79.8612]} // Default to Colombo if no location
+                    zoom={15} 
+                    style={{ height: '100%', width: '100%' }}
+                    scrollWheelZoom={false}
+                  >
+                    <TileLayer
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    />
+                    
+                    {driverLocation && (
+                      <Marker position={driverLocation} icon={driverIcon}>
+                        <Popup>Driver's current location</Popup>
+                      </Marker>
+                    )}
+                    
+                    <Marker 
+                      position={[
+                        parseFloat(order.customerCoordinates?.latitude || 6.9271),
+                        parseFloat(order.customerCoordinates?.longitude || 79.8612)
+                      ]} 
+                      icon={destinationIcon}
+                    >
+                      <Popup>Delivery address: {customerData.address || 'Customer location'}</Popup>
+                    </Marker>
+                  </MapContainer>
+                ) : (
+                  // Static fallback when neither tracking nor location is available
+                  <div className="flex flex-col items-center justify-center h-full bg-gray-100">
+                    <FaMapMarkerAlt size={32} className="text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500 text-center">
+                      {orderStatus === 'On the way' ? 
+                        'Location tracking unavailable. Your order is still on the way.' : 
+                        'Delivery location information'
+                      }
+                    </p>
+                  </div>
+                )}
+              </div>
+              {order.driverCurrentLocation?.lastUpdated && (
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  Last updated: {formatDate(order.driverCurrentLocation?.lastUpdated)}
+                </p>
+              )}
+            </div>
+
+            {/* Connection status indicator */}
+            <div className="flex items-center justify-center mt-4">
+              {isTrackingEnabled ? (
+                <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full flex items-center">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                  Live tracking active
+                </span>
+              ) : isPolling ? (
+                <span className="text-xs bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full flex items-center">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
+                  Periodic location updates
+                </span>
+              ) : (
+                <span className="text-xs bg-gray-100 text-gray-800 px-3 py-1 rounded-full flex items-center">
+                  <div className="w-2 h-2 bg-gray-500 rounded-full mr-2"></div>
+                  Static location information
+                </span>
+              )}
+            </div>
+
             {/* Price Summary */}
             <div className="bg-gray-50 rounded-xl p-6">
               <div className="flex items-center gap-2 mb-4">
@@ -397,6 +700,25 @@ const OrderDetails = ({ order, onClose }) => {
                 </div>
               )}
             </motion.div>
+          )}
+
+          {/* Debug info section - add this before the closing motion.div */}
+          {process.env.NODE_ENV !== 'production' && (
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <details className="text-xs text-gray-500">
+                <summary className="cursor-pointer hover:text-gray-700">Debug Information</summary>
+                <div className="mt-2 bg-gray-50 p-3 rounded text-left overflow-auto max-h-40">
+                  <p>Order ID: {order.orderId}</p>
+                  <p>Status: {order.orderStatus}</p>
+                  <p>Driver ID: {order.diliveryDriverId || 'None'}</p>
+                  <p>Socket Connected: {socketService.getSocket()?.connected ? 'Yes' : 'No'}</p>
+                  <p>Tracking Enabled: {isTrackingEnabled ? 'Yes' : 'No'}</p>
+                  <p>Polling Active: {isPolling ? 'Yes' : 'No'}</p>
+                  <p>Driver Location: {driverLocation ? `[${driverLocation[0]}, ${driverLocation[1]}]` : 'None'}</p>
+                  <p>Last Updated: {order.driverCurrentLocation?.lastUpdated ? formatDate(order.driverCurrentLocation.lastUpdated) : 'N/A'}</p>
+                </div>
+              </details>
+            </div>
           )}
         </motion.div>
       </motion.div>

@@ -50,7 +50,11 @@ import UserProfile from "./pages/User/UserProfile";
 import EditUser from "./pages/Admin/User/EditUser";
 import DeliveryDashboard from "./pages/Driver/DeliveryDashboard";
 import DriverDeliveryManager from "./components/Delivery/DriverDeliveryManager";
+import MyDeliveries from "./pages/Driver/MyDeliveries";
 import authService from './services/authService';
+import OrderDetailsPage from './pages/Driver/OrderDetailsPage';
+import DriverProfile from './pages/Driver/DriverProfile';
+import DeliveryManagement from './pages/Admin/DeliveryManagement';
 
 
 
@@ -96,7 +100,7 @@ function App() {
         <Route path="/menu" element={<Menu />} />
         <Route path="/resturents" element={<Resturent />} />
         
-        <Route path="/order/dashboard" element={<AdminDashboard />} />
+        <Route path="/order/dashboard" element={<AdminOrderDashboard />} />
 
         {/* Protected customer routes */}
         <Route path="/cart" element={
@@ -234,9 +238,17 @@ function App() {
             </ProtectedRoutes>
           } 
         />
+        <Route path="/driver/my-deliveries" element={<MyDeliveries />} />
+        <Route path="/driver/profile" element={<DriverProfile />} />
 
         {/* Order update page */}
         <Route path="unauthorized" element={<p className="font bold text-3xl mt-20 ml-20">Unauthorized</p>} />
+
+        {/* Order Details Page */}
+        <Route path="/order/:orderId" element={<OrderDetailsPage />} />
+
+        {/* Delivery Management Page */}
+        <Route path="/admin/delivery" element={<DeliveryManagement />} />
       
       </Routes>
     </Router>
