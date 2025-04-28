@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { useState,useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, useParams } from "react-router-dom";
 import "./App.css";
 import Home from "./pages/Main/Home";
 import AboutUs from "./pages/Main/AboutUs";
@@ -8,8 +8,8 @@ import Cart from "./pages/Main/Cart";
 import MyOrders from "./pages/Main/MyOrders";
 import AdminOrderDashboard from "./pages/Admin/Order/AdminOrderDashboard";
 import AdminLayout from "./components/Admin/Order/AdminLayout";
-import AdminDashboard from "./pages/Admin/AdminDashboard";
 
+import AdminDashboard from "./pages/Admin/AdminDashboard";
 import Profile from "./pages/User/Profile";
 import Root from "./components/Root";
 import Login from "./pages/Main/Login";
@@ -51,8 +51,21 @@ import EditUser from "./pages/Admin/User/EditUser";
 
 
 import RestaurantRegister from "./pages/Main/RestaurantRegister"
-import authService from './services/authService';
 import PaymentDashboard from "./pages/Admin/Payment/PaymentDashboard";
+import DeliveryDashboard from "./pages/Driver/DeliveryDashboard";
+import DriverDeliveryManager from "./components/Delivery/DriverDeliveryManager";
+import MyDeliveries from "./pages/Driver/MyDeliveries";
+import authService from './services/authService';
+import OrderDetailsPage from './pages/Driver/OrderDetailsPage';
+import DriverProfile from './pages/Driver/DriverProfile';
+import DeliveryManagement from './pages/Admin/DeliveryManagement';
+
+
+
+
+
+
+
 
 function App() {
   useEffect(() => {
@@ -64,6 +77,19 @@ function App() {
     <Router>
       <Routes>
 
+
+
+        <Route 
+          path="/DeliveryDashboard" 
+          element={
+            (() => {
+              console.log("Rendering DeliveryDashboard route");
+              const userData = localStorage.getItem('userData');
+              console.log("userData in route:", userData);
+              return <DeliveryDashboard />;
+            })()
+          } 
+        />
         {/* <Route path="/" element={<Root />} /> */}
         <Route path="/" element={<Root />} />
         <Route path="/profile" element={<Profile />} />
@@ -80,6 +106,8 @@ function App() {
         <Route path="/menu" element={<Menu />} />
         <Route path="/resturents" element={<Resturent />} />
         
+        <Route path="/order/dashboard" element={<AdminOrderDashboard />} />
+
         {/* Protected customer routes */}
         <Route path="/cart" element={
           <ProtectedRoutes requireRole={["customer", "admin"]}>
@@ -243,8 +271,26 @@ function App() {
           </ProtectedRoutes>
         } />
 
+        {/* Driver routes */}
+        <Route 
+          path="/driver/delivery/:driverId/:orderId" 
+          element={
+            <ProtectedRoutes requireRole={["delivery_person"]}>
+              <DriverDeliveryManager />
+            </ProtectedRoutes>
+          } 
+        />
+        <Route path="/driver/my-deliveries" element={<MyDeliveries />} />
+        <Route path="/driver/profile" element={<DriverProfile />} />
+
         {/* Order update page */}
         <Route path="unauthorized" element={<p className="font bold text-3xl mt-20 ml-20">Unauthorized</p>} />
+
+        {/* Order Details Page */}
+        <Route path="/order/:orderId" element={<OrderDetailsPage />} />
+
+        {/* Delivery Management Page */}
+        <Route path="/admin/delivery" element={<DeliveryManagement />} />
       
       <Route path="*" element={<p className="font bold text-3xl mt-20 ml-20">Page Not Found</p>} /> 
       </Routes>

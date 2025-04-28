@@ -20,6 +20,7 @@ const OrderSchema = new mongoose.Schema({
     restaurantName: { type: String, required: true },
     loggedInUser: { type: String, required: true }, // Link to logged-in user
     loggedInUserName: { type: String, required: true },
+    diliveryDriverId: { type: String }, // Link to delivery driver (if applicable)
     customer: {
         name: { type: String, required: true },
         email: { type: String, required: true },
@@ -71,7 +72,34 @@ const OrderSchema = new mongoose.Schema({
         default: {}
     },
     
-    placedAt: { type: Date, default: Date.now }
+    placedAt: { type: Date, default: Date.now },
+
+    // Add driver assignment status
+    driverAssignmentStatus: { 
+        type: String, 
+        enum: ['pending', 'assigned', 'accepted', 'rejected', 'completed'], 
+        default: 'pending' 
+    },
+    assignmentHistory: [
+        {
+            driverId: { type: String },
+            status: { type: String, enum: ['offered', 'accepted', 'rejected', 'timed_out'] },
+            timestamp: { type: Date, default: Date.now }
+        }
+    ],
+    // Add driver information for display
+    driverInfo: {
+        name: { type: String },
+        phone: { type: String },
+        vehicleType: { type: String },
+        licensePlate: { type: String }
+    },
+    // Current location for tracking
+    driverCurrentLocation: {
+        latitude: { type: Number },
+        longitude: { type: Number },
+        lastUpdated: { type: Date }
+    }
 });
 
 // Middleware to update status timestamps on save
