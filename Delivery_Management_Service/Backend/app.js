@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 const http = require('http');
 const socketIO = require('socket.io');
 const connectDB = require('./config/db');
-//const assignmentService = require('./src/services/assignmentService');
+const autoAssignmentService = require('./src/services/autoAssignmentService');
 
 // Load environment variables
 dotenv.config();
@@ -53,10 +53,15 @@ app.use((req, res, next) => {
 });
 
 // Routes
-app.use('/api/drivers', require('./src/routes/driverRoutes'));
-app.use('/api/deliveries', require('./src/routes/deliveryRoutes'));
-//app.use('/api/assignment', require('./src/routes/assignmentRoutes'));
 
+app.use('/api/deliveries', require('./src/routes/deliveryRoutes'));
+app.use('/api', require('./src/routes/autoAssignmentRoutes'));
+
+// Start the auto-assignment service on server startup
+// Uncomment the next line to automatically start assignment on server startup
+// autoAssignmentService.startAutomaticAssignment();
+
+console.log('Auto-assignment service initialized');
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -69,14 +74,9 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Server error' });
 });
 
-
 const PORT = process.env.PORT || 5002;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-
-  // Start the automatic assignment process with default interval (10 seconds)
- // assignmentService.startAssignmentProcess();
-
 });
 
 module.exports = { app, server };

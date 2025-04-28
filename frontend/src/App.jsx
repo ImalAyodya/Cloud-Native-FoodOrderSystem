@@ -9,11 +9,7 @@ import MyOrders from "./pages/Main/MyOrders";
 import AdminOrderDashboard from "./pages/Admin/Order/AdminOrderDashboard";
 import AdminLayout from "./components/Admin/Order/AdminLayout";
 
-import DeliveryTracker from "./components/Delivery/DeliveryTracker";
-import DriverDeliveryManager from "./components/Delivery/DriverDeliveryManager";
-import DeliveryDashboard from "./components/Admin/delivery/DeliveryDashboard"
 import AdminDashboard from "./pages/Admin/AdminDashboard";
-
 import Profile from "./pages/User/Profile";
 import Root from "./components/Root";
 import Login from "./pages/Main/Login";
@@ -52,20 +48,12 @@ import RequestPasswordReset from "./pages/User/RequestPasswordReset";
 import ResetPassword from "./pages/User/ResetPassword";
 import UserProfile from "./pages/User/UserProfile";
 import EditUser from "./pages/Admin/User/EditUser";
-
+import DeliveryDashboard from "./pages/Driver/DeliveryDashboard";
+import DriverDeliveryManager from "./components/Delivery/DriverDeliveryManager";
 import authService from './services/authService';
-// Create a wrapper component to extract the URL parameter
-function DeliveryTrackerWrapper() {
-  const { deliveryId } = useParams();
-  return <DeliveryTracker deliveryId={deliveryId} />;
-}
 
-// Create a wrapper for DriverDeliveryManager as well
-function DriverDeliveryWrapper() {
-  const { deliveryId } = useParams();
-  // You might need to add driverId here as well if needed
-  return <DriverDeliveryManager deliveryId={deliveryId} />;
-}
+
+
 
 
 
@@ -81,6 +69,18 @@ function App() {
     <Router>
       <Routes>
 
+
+        <Route 
+          path="/DeliveryDashboard" 
+          element={
+            (() => {
+              console.log("Rendering DeliveryDashboard route");
+              const userData = localStorage.getItem('userData');
+              console.log("userData in route:", userData);
+              return <DeliveryDashboard />;
+            })()
+          } 
+        />
         {/* <Route path="/" element={<Root />} /> */}
         <Route path="/" element={<Root />} />
         <Route path="/profile" element={<Profile />} />
@@ -97,9 +97,7 @@ function App() {
         <Route path="/resturents" element={<Resturent />} />
         
         <Route path="/order/dashboard" element={<AdminDashboard />} />
-        <Route path="/delivery-tracker/:deliveryId" element={<DeliveryTrackerWrapper />} />
-        <Route path="/driver-delivery/:deliveryId" element={<DriverDeliveryWrapper />} />
-        <Route path="/DeliveryDashboard" element={<DeliveryDashboard/>} />
+
         {/* Protected customer routes */}
         <Route path="/cart" element={
           <ProtectedRoutes requireRole={["customer", "admin"]}>
@@ -226,6 +224,16 @@ function App() {
             <ContactDetail />
           </ProtectedRoutes>
         } />
+
+        {/* Driver routes */}
+        <Route 
+          path="/driver/delivery/:driverId/:orderId" 
+          element={
+            <ProtectedRoutes requireRole={["delivery_person"]}>
+              <DriverDeliveryManager />
+            </ProtectedRoutes>
+          } 
+        />
 
         {/* Order update page */}
         <Route path="unauthorized" element={<p className="font bold text-3xl mt-20 ml-20">Unauthorized</p>} />

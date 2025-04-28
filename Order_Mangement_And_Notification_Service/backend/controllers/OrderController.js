@@ -670,5 +670,228 @@ exports.getReadyForPickupOrders = async (req, res) => {
         error: error.message 
       });
     }
-  };
+};
+
+// Update driver assignment
+exports.updateDriverAssignment = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { 
+      driverId, 
+      assignmentStatus, 
+      assignmentHistoryUpdate,
+      rejectionReason, 
+      driverInfo,
+      driverCurrentLocation 
+    } = req.body;
+
+    const order = await Order.findOne({ orderId });
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+    
+    // Update assignment status
+    if (assignmentStatus) {
+      order.driverAssignmentStatus = assignmentStatus;
+    }
+    
+    // Add to assignment history
+    if (assignmentHistoryUpdate) {
+      if (!order.assignmentHistory) {
+        order.assignmentHistory = [];
+      }
+      order.assignmentHistory.push(assignmentHistoryUpdate);
+    }
+    
+    // If accepted, set the driver ID
+    if (assignmentStatus === 'accepted') {
+      order.diliveryDriverId = driverId;
+      
+      // Add driver info if provided
+      if (driverInfo) {
+        order.driverInfo = driverInfo;
+      }
+      
+      // Add driver location if provided
+      if (driverCurrentLocation) {
+        order.driverCurrentLocation = driverCurrentLocation;
+      }
+    }
+    
+    // Set driver info for display
+    if (driverInfo) {
+      order.driverInfo = driverInfo;
+    }
+    
+    await order.save();
+    
+    // Emit socket event if using Socket.io
+    if (req.io) {
+      req.io.to(`order_${orderId}`).emit('assignment_update', {
+        orderId,
+        driverId,
+        assignmentStatus,
+        driverInfo: order.driverInfo
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: `Driver assignment updated for order ${orderId}`,
+      order
+    });
+  } catch (error) {
+    console.error('Error updating driver assignment:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update driver assignment',
+      error: error.message
+    });
+  }
+};
+
+// Update driver location for an order
+exports.updateDriverLocation = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { driverLocation } = req.body;
+    
+    const order = await Order.findOne({ orderId });
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+    
+    // Update driver location
+    order.driverCurrentLocation = {
+      latitude: driverLocation.latitude,
+      longitude: driverLocation.longitude,
+      lastUpdated: new Date()
+    };
+    
+    await order.save();
+    
+    // Emit socket event if using Socket.io
+    if (req.io) {
+      req.io.to(`order_${orderId}`).emit('driver_location_update', {
+        orderId,
+        driverLocation: order.driverCurrentLocation
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Driver location updated',
+      location: order.driverCurrentLocation
+    });
+  } catch (error) {
+    console.error('Error updating driver location:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update driver location',
+      error: error.message
+    });
+  }
+};
+
+// Get order's assignment status
+exports.getAssignmentStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    
+    const order = await Order.findOne({ orderId });
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        orderId: order.orderId,
+        driverAssignmentStatus: order.driverAssignmentStatus || 'pending',
+        diliveryDriverId: order.diliveryDriverId,
+        driverInfo: order.driverInfo,
+        assignmentHistory: order.assignmentHistory || [],
+        driverCurrentLocation: order.driverCurrentLocation
+      }
+    });
+  } catch (error) {
+    console.error('Error getting assignment status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get assignment status',
+      error: error.message
+    });
+  }
+};
+
+// Join tracking room for real-time updates
+exports.joinTrackingRoom = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { socketId } = req.body;
+    
+    if (!orderId || !socketId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order ID and Socket ID are required'
+      });
+    }
+    
+    const order = await Order.findOne({ orderId });
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+    
+    // If using Socket.IO admin functionality (optional)
+    if (req.io) {
+      // Get socket by ID
+      const socket = req.io.sockets.sockets.get(socketId);
+      
+      if (socket) {
+        // Join the room
+        socket.join(`order_${orderId}`);
+        
+        // Send initial status to the client
+        socket.emit('order_status_update', {
+          orderId,
+          status: order.orderStatus,
+          driverId: order.diliveryDriverId,
+          driverInfo: order.driverInfo,
+          driverLocation: order.driverCurrentLocation
+        });
+      }
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Joined tracking room successfully',
+      orderStatus: order.orderStatus,
+      driverInfo: order.driverInfo,
+      driverLocation: order.driverCurrentLocation
+    });
+  } catch (error) {
+    console.error('Error joining tracking room:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to join tracking room',
+      error: error.message
+    });
+  }
+};
 

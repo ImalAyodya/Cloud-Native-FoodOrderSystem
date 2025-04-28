@@ -18,6 +18,7 @@ const orderRoutes = require('./routes/OrderRoute');
 const orderStatusRoutes = require('./routes/OrderStatusRoutes');
 const emailRoutes = require('./routes/emailRoutes');
 const smsRoutes = require('./routes/smsRoutes'); 
+
 app.use('/api/email', emailRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/orders', orderStatusRoutes);

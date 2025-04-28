@@ -2,27 +2,31 @@ const express = require('express');
 const router = express.Router();
 const driverController = require('../controllers/driverController');
 
-// Register a new driver
-router.post('/', driverController.registerDriver);
+// Get driver by ID
+router.get('/:driverId', driverController.getDriverById);
 
-// Update driver location
-router.put('/:driverId/location', driverController.updateLocation);
+// Get pending assignments for a driver
+router.get('/:driverId/pending-assignments', driverController.getPendingAssignments);
+
+// Get current orders for a driver
+router.get('/:driverId/current-orders', driverController.getCurrentOrders);
 
 // Update driver availability
 router.put('/:driverId/availability', driverController.updateAvailability);
 
-// Get all drivers
-router.get('/', driverController.getAllDrivers);
+// Update driver location
+router.put('/:driverId/location', driverController.updateLocation);
 
-// Get a driver by ID
-router.get('/:driverId', driverController.getDriverById);
+// Accept an order
+router.post('/:driverId/accept/:orderId', driverController.acceptOrder);
 
-// Find nearest drivers
-router.post('/:nearest', driverController.findNearestDrivers);
+// Reject an order
+router.post('/:driverId/reject/:orderId', driverController.rejectOrder);
 
-//Add a Rating for a Driver
-router.post('/:driverId/rating', driverController.addRating);
+// Complete delivery
+router.post('/:driverId/complete/:orderId', driverController.completeDelivery);
 
+// Register a new driver
+router.post('/register', driverController.registerDriver);
 
-
-module.exports = router;
+module.exports = router;

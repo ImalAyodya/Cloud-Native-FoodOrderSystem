@@ -8,6 +8,11 @@ router.post('/', OrderController.createOrder);
 // Get all orders
 //http://localhost:5001/api/orders/
 router.get('/', OrderController.getAllOrders);
+
+// SPECIFIC ROUTES MUST COME BEFORE PARAMETERIZED ROUTES
+// Get all orders with Ready for Pickup status
+router.get('/ready-for-pickup', OrderController.getReadyForPickupOrders);
+
 // Get a single order by ID
 //http://localhost:5001/api/orders/:id
 router.get('/:id', OrderController.getOrderById);
@@ -30,8 +35,19 @@ router.put('/:orderId/items', OrderController.updateOrderItems);
 // http://localhost:5001/api/orders/orders/:orderId
 router.get('/orders/:orderId', OrderController.getOrderByOrderId);
 
+// Update driver assignment status
+// http://localhost:5001/api/orders/:orderId/driver-assignment
+router.put('/:orderId/driver-assignment', OrderController.updateDriverAssignment);
 
-// Get all orders with Ready for Pickup status
-// http://localhost:5001/api/orders/ready-for-pickup
-router.get('/ready-for-pickup', OrderController.getReadyForPickupOrders);
+// Update driver location
+// http://localhost:5001/api/orders/:orderId/update-driver-location
+router.put('/:orderId/update-driver-location', OrderController.updateDriverLocation);
+
+// Get order's driver assignment status
+// http://localhost:5001/api/orders/:orderId/assignment-status
+router.get('/:orderId/assignment-status', OrderController.getAssignmentStatus);
+
+// Join tracking room for real-time updates
+router.post('/track/:orderId', OrderController.joinTrackingRoom);
+
 module.exports = router;
