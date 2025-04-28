@@ -41,4 +41,8 @@ RestaurantRouter.get('/nearby', restaurantController.getNearbyRestaurants);
 //http://localhost:5003/api/restaurant/user/:userId
 RestaurantRouter.get('/user/:userId', protect, restaurantController.getRestaurantsByUserId);
 
+
+// Restaurant analytics route
+RestaurantRouter.get('/:id/analytics', restaurantController.getRestaurantAnalytics);
+
 module.exports = RestaurantRouter;

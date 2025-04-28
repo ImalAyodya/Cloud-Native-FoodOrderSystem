@@ -49,6 +49,7 @@ import UserProfile from "./pages/User/UserProfile";
 import EditUser from "./pages/Admin/User/EditUser";
 
 import authService from './services/authService';
+import RestaurantAnalyticsDashboard from "./pages/Restaurant/RestaurantAnalyticsDashboard";
 
 function App() {
   useEffect(() => {
@@ -174,6 +175,8 @@ function App() {
         <Route path="/add-menu-item" element={<AddMenuItem />} />
         <Route path="/restaurant/:restaurantId/add-menu-item" element={<AddMenuItem />} />
         <Route path="/restaurant/profile/:id" element={<RestaurantProfile />} />
+        {/* Restaurant Analytics Dashboard */}
+        <Route path="/restaurant/:id/analytics" element={<RestaurantAnalyticsDashboard />} />
 
         <Route path="/restaurant/:id/orders" element={<RestaurantOrdersPage />} />
         {/* Order Update Page */}
@@ -197,7 +200,7 @@ function App() {
 
         {/* Order update page */}
         <Route path="unauthorized" element={<p className="font bold text-3xl mt-20 ml-20">Unauthorized</p>} />
-      
+
       </Routes>
     </Router>
   );

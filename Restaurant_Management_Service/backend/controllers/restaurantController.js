@@ -1,6 +1,8 @@
 const Restaurant = require('../models/Restaurant');
 const mongoose = require('mongoose'); // Added mongoose for ObjectId validation
 const path = require('path');
+const MenuItem = require('../models/MenuItem');
+const Order = require('../../../Order_Mangement_And_Notification_Service/backend/models/Order');
 
 // Create new restaurant
 const addRestaurant = async (req, res) => {
@@ -144,33 +146,7 @@ const getAvailability = async (req, res) => {
   }
 };
 
-// const deleteRestaurant = async (req, res) => {
-//   try {
-//     const restaurant = await Restaurant.findById(req.params.id);
-//     if (!restaurant) {
-//       return res.status(404).json({ success: false, message: 'Restaurant not found' });
-//     }
-
-//     // Delete associated images
-//     if (restaurant.images) {
-//       Object.values(restaurant.images).forEach(imagePath => {
-//         if (imagePath) {
-//           const fullPath = path.join(__dirname, '..', imagePath);
-//           if (fs.existsSync(fullPath)) {
-//             fs.unlinkSync(fullPath);
-//           }
-//         }
-//       });
-//     }
-
-//     await Restaurant.findByIdAndDelete(req.params.id);
-//     res.status(200).json({ success: true, message: 'Restaurant deleted' });
-//   } catch (error) {
-//     console.error('Error deleting restaurant:', error);
-//     res.status(500).json({ success: false, message: 'Internal Server Error', error: error.message });
-//   }
-// };
-
+// Delete restaurant
 const deleteRestaurant = async (req, res) => {
   try {
     // Validate restaurant ID
@@ -253,6 +229,61 @@ const getRestaurantsByUserId = async (req, res) => {
   }
 };
 
+const getRestaurantAnalytics = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validate the restaurant ID
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid restaurant ID' });
+    }
+
+    // Check if the restaurant exists
+    const restaurant = await Restaurant.findById(id);
+    if (!restaurant) {
+      return res.status(404).json({ success: false, message: 'Restaurant not found' });
+    }
+
+    // Fetch menu items for the restaurant
+    const menuItems = await MenuItem.find({ id }).select('name category cuisine price');
+
+    // Hardcoded analytics data
+    const analytics = {
+      totalMenuItems: menuItems.length,
+      totalOrders: Order.length, // Hardcoded
+      totalRevenue: 5000, // Hardcoded
+      revenueData: [
+        { date: '2025-04-01', revenue: 1000 },
+        { date: '2025-04-02', revenue: 1200 },
+        { date: '2025-04-03', revenue: 1500 },
+      ], // Hardcoded
+      menuItemsByCategory: menuItems.reduce((acc, item) => {
+        const existingCategory = acc.find((entry) => entry.name === item.category);
+        if (existingCategory) {
+          existingCategory.value += 1;
+        } else {
+          acc.push({ name: item.category, value: 1 });
+        }
+        return acc;
+      }, []),
+      popularDishes: [
+        { name: 'Pizza', orders: 50 },
+        { name: 'Burger', orders: 40 },
+        { name: 'Pasta', orders: 30 },
+      ], // Hardcoded
+    };
+
+    // Return the analytics data
+    res.status(200).json(analytics);
+  } catch (error) {
+    console.error('Error fetching restaurant analytics:', error.message, error.stack);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching analytics data',
+    });
+  }
+};
+
 module.exports = {
   addRestaurant,
   getRestaurants,
@@ -262,5 +293,6 @@ module.exports = {
   getAvailability,
   deleteRestaurant,
   getNearbyRestaurants,
-  getRestaurantsByUserId
+  getRestaurantsByUserId,
+  getRestaurantAnalytics
 };
