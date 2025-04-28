@@ -46,6 +46,22 @@ services:
       - food-order-network
     restart: unless-stopped
 
+  delivery-service:
+    build: ./Delivery_Management_Service/Backend
+    ports:
+      - "5002:5002"
+    environment:
+      - PORT=5002
+      - NODE_ENV=production
+      - MONGO_URI=mongodb+srv://Ayodya:Ayodya@cluster0.csn4fag.mongodb.net/DeliveryDB?retryWrites=true&w=majority&appName=Cluster0
+      - ORDER_SERVICE_URL=http://order-notification-service:5001
+      - ORDER_NOTIFICATION_SERVICE_URL=http://order-notification-service:5001
+    depends_on:
+      - order-notification-service
+    networks:
+      - food-order-network
+    restart: unless-stopped
+
   frontend:
     build: ./frontend
     ports:
@@ -54,6 +70,7 @@ services:
       - restaurant-service
       - user-management-service
       - order-notification-service
+      - delivery-service
     networks:
       - food-order-network
     restart: unless-stopped
