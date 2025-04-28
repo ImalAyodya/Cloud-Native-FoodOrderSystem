@@ -13,5 +13,7 @@ router.put('/me', auth, userController.updateProfile);
 router.patch('/me/password', auth, userController.updatePassword);
 router.post('/me/avatar', auth, upload.single('avatar'), userController.uploadAvatar);
 router.get('/me/dashboard', auth, userController.getDashboard);
+// Add this route to your existing routes
+router.get('/role/:role', auth, userController.getUsersByRole);
 
 module.exports = router;

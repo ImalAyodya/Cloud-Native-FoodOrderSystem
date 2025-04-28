@@ -91,12 +91,6 @@ const AdminSidebar = ({ user }) => {
       ]
     },
     { 
-      name: 'Menu Management', 
-      icon: <FaList size={20} />, 
-      path: '/admin/menu',
-      badge: null
-    },
-    { 
       name: 'Users', 
       icon: <FaUsers size={20} />, 
       path: '/admin/users',

@@ -114,10 +114,54 @@ const getDashboard = async (req, res) => {
     }
 };
 
+// Get users by role
+const getUsersByRole = async (req, res) => {
+    try {
+        const { role } = req.params;
+        
+        // Validate role parameter
+        const validRoles = ['customer', 'restaurant_owner', 'delivery_person', 'admin'];
+        if (!validRoles.includes(role)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Invalid role parameter. Valid roles are: customer, restaurant_owner, delivery_person, admin' 
+            });
+        }
+        
+        // Optional query parameters for pagination
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50;
+        const skip = (page - 1) * limit;
+        
+        // Find users with the specified role
+        const users = await User.find({ role, isActive: true })
+            .select('-password') // Exclude password
+            .skip(skip)
+            .limit(limit)
+            .sort({ createdAt: -1 });
+        
+        // Count total users with this role for pagination info
+        const totalUsers = await User.countDocuments({ role, isActive: true });
+        
+        res.status(200).json({
+            success: true,
+            count: users.length,
+            totalUsers,
+            totalPages: Math.ceil(totalUsers / limit),
+            currentPage: page,
+            users
+        });
+    } catch (error) {
+        console.error('Get users by role error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
 module.exports = {
     getProfile,
     updateProfile,
     updatePassword,
     uploadAvatar,
-    getDashboard
+    getDashboard,
+    getUsersByRole
 };

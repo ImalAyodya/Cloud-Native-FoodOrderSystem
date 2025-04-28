@@ -23,6 +23,7 @@ import {
   FaRoute,
   FaClock,
   FaList,
+  FaTimes,
   FaUserPlus,
   FaEye
 } from 'react-icons/fa';
@@ -109,25 +110,51 @@ const DeliveryManagement = () => {
       setIsLoading(true);
       
       try {
-        // 1. Get all users with delivery_person role from User Service
-        const driversResponse = await fetch('http://localhost:5000/api/users?role=delivery_person');
-        const driversData = await driversResponse.json();
+        // Get auth token
+        const token = localStorage.getItem('token');
+        const headers = { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        };
         
-        if (driversData.success && driversData.users) {
+        // 1. Fetch all users from the User Service
+        const usersResponse = await fetch('http://localhost:5000/api/admin/users', {
+          headers
+        });
+        
+        if (!usersResponse.ok) {
+          throw new Error('Failed to fetch users');
+        }
+        
+        const usersData = await usersResponse.json();
+        
+        // Filter for delivery drivers
+        const deliveryDrivers = usersData.users ? 
+          usersData.users.filter(user => user.role === 'delivery_person') : 
+          [];
+        
+        if (deliveryDrivers.length > 0) {
           // Format the driver data
-          const formattedDrivers = await Promise.all(driversData.users.map(async (driver) => {
+          const formattedDrivers = await Promise.all(deliveryDrivers.map(async (driver) => {
             // For each driver, try to get their stats
             try {
-              const statsResponse = await fetch(`http://localhost:5001/api/orders/driver/${driver._id}/stats`);
+              const statsResponse = await fetch(`http://localhost:5001/api/orders/driver/${driver._id}/stats`, {
+                headers
+              });
+              
               const statsData = await statsResponse.json();
               
-              // Get their active orders
-              const ordersResponse = await fetch(`http://localhost:5001/api/orders/driver/${driver._id}`);
-              const ordersData = await ordersResponse.json();
+              // Get active orders for this driver
+              const activeOrderResponse = await fetch(`http://localhost:5001/api/orders?diliveryDriverId=${driver._id}&status=On the way,Ready for Pickup`, {
+                headers
+              });
               
-              const activeOrder = ordersData.success && ordersData.orders ? 
-                ordersData.orders.find(order => ['On the way', 'Ready for Pickup'].includes(order.orderStatus)) : 
-                null;
+              const activeOrderData = await activeOrderResponse.json();
+              const activeOrders = Array.isArray(activeOrderData) ? 
+                activeOrderData : 
+                (activeOrderData.orders || []);
+              
+              const activeOrder = activeOrders.length > 0 ? activeOrders[0] : null;
               
               return {
                 id: driver._id,
@@ -162,9 +189,15 @@ const DeliveryManagement = () => {
           }));
           
           setDrivers(formattedDrivers);
-          setFilteredDrivers(formattedDrivers);
           
-          // Count active drivers
+          // Apply any current filters
+          if (filterStatus !== 'all') {
+            setFilteredDrivers(formattedDrivers.filter(driver => driver.status === filterStatus));
+          } else {
+            setFilteredDrivers(formattedDrivers);
+          }
+          
+          // Count active drivers - those who are both active in status and online
           const activeDriversCount = formattedDrivers.filter(d => 
             d.status === 'active' && d.onlineStatus === 'online'
           ).length;
@@ -174,54 +207,79 @@ const DeliveryManagement = () => {
             ...prev,
             activeDrivers: activeDriversCount
           }));
+        } else {
+          setDrivers([]);
+          setFilteredDrivers([]);
+          setAnalytics(prev => ({
+            ...prev,
+            activeDrivers: 0
+          }));
         }
         
-        // 2. Get active orders (on the way or ready for pickup)
-        const readyOrdersResponse = await fetch('http://localhost:5001/api/orders/ready-for-pickup');
-        if (readyOrdersResponse.ok) {
-          const readyOrdersData = await readyOrdersResponse.json();
-          if (readyOrdersData.success) {
-            setActiveOrders(readyOrdersData.orders || []);
-            
-            // Set the analytics data based on these orders
-            let deliveryTimes = [];
-            
-            readyOrdersData.orders.forEach(order => {
-              if (order.statusTimestamps && order.statusTimestamps.Delivered && order.placedAt) {
-                const placedTime = new Date(order.placedAt);
-                const deliveredTime = new Date(order.statusTimestamps.Delivered);
-                const minutesDiff = (deliveredTime - placedTime) / (1000 * 60);
-                if (minutesDiff > 0) {
-                  deliveryTimes.push(minutesDiff);
-                }
-              }
+        // 2. Fetch active orders for delivery tracking
+        const activeOrdersResponse = await fetch('http://localhost:5001/api/orders?status=On the way,Ready for Pickup', {
+          headers
+        });
+        
+        if (activeOrdersResponse.ok) {
+          const activeOrdersData = await activeOrdersResponse.json();
+          const ordersList = Array.isArray(activeOrdersData) ? 
+            activeOrdersData : 
+            (activeOrdersData.orders || []);
+          
+          setActiveOrders(ordersList);
+          
+          // Calculate analytics from the orders data
+          if (ordersList.length > 0) {
+            // Calculate total deliveries
+            const completedOrdersResponse = await fetch('http://localhost:5001/api/orders?status=Delivered', {
+              headers
             });
             
-            // Calculate average delivery time
-            const avgTime = deliveryTimes.length > 0 
-              ? deliveryTimes.reduce((sum, time) => sum + time, 0) / deliveryTimes.length
-              : 0;
-            
-            // Calculate deliveries in the last week
-            const oneWeekAgo = new Date();
-            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-            
-            const lastWeekDeliveries = readyOrdersData.orders.filter(order => 
-              order.placedAt && new Date(order.placedAt) >= oneWeekAgo
-            ).length;
-            
-            setAnalytics(prev => ({
-              ...prev,
-              totalDeliveries: readyOrdersData.orders.length,
-              averageDeliveryTime: Math.round(avgTime),
-              deliveriesLastWeek: lastWeekDeliveries
-            }));
+            if (completedOrdersResponse.ok) {
+              const completedOrdersData = await completedOrdersResponse.json();
+              const completedOrders = Array.isArray(completedOrdersData) ? 
+                completedOrdersData : 
+                (completedOrdersData.orders || []);
+              
+              // Calculate average delivery time
+              let deliveryTimes = [];
+              completedOrders.forEach(order => {
+                if (order.statusTimestamps?.Delivered && order.placedAt) {
+                  const placedTime = new Date(order.placedAt);
+                  const deliveredTime = new Date(order.statusTimestamps.Delivered);
+                  const minutesDiff = Math.round((deliveredTime - placedTime) / (1000 * 60));
+                  if (minutesDiff > 0 && minutesDiff < 300) { // Ignore outliers over 5 hours
+                    deliveryTimes.push(minutesDiff);
+                  }
+                }
+              });
+              
+              const avgTime = deliveryTimes.length > 0 
+                ? Math.round(deliveryTimes.reduce((sum, time) => sum + time, 0) / deliveryTimes.length)
+                : 0;
+              
+              // Count deliveries in the last week
+              const oneWeekAgo = new Date();
+              oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+              
+              const lastWeekDeliveries = completedOrders.filter(order => 
+                order.placedAt && new Date(order.placedAt) >= oneWeekAgo
+              ).length;
+              
+              setAnalytics(prev => ({
+                ...prev,
+                totalDeliveries: completedOrders.length,
+                averageDeliveryTime: avgTime,
+                deliveriesLastWeek: lastWeekDeliveries
+              }));
+            }
           }
         }
         
       } catch (error) {
         console.error('Error fetching delivery management data:', error);
-        toast.error('Failed to load delivery management data');
+        toast.error('Failed to load delivery management data: ' + error.message);
       } finally {
         setIsLoading(false);
       }
@@ -235,7 +293,7 @@ const DeliveryManagement = () => {
     }, 60000);
     
     return () => clearInterval(intervalId);
-  }, []);
+  }, [filterStatus]);
   
   // Filter drivers based on search term and status
   useEffect(() => {
@@ -354,48 +412,60 @@ const DeliveryManagement = () => {
     }
   };
   
-  const toggleDriverStatus = async (driverId, currentStatus) => {
-    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+  // Update the toggleDriverStatus function to include authentication
+
+const toggleDriverStatus = async (driverId, currentStatus) => {
+  const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+  
+  try {
+    // Get auth token from localStorage
+    const token = localStorage.getItem('token');
     
-    try {
-      // Update user active status
-      const response = await fetch(`http://localhost:5000/api/users/${driverId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          isActive: newStatus === 'active'
-        })
+    if (!token) {
+      toast.error('Authentication token not found. Please login again.');
+      return;
+    }
+    
+    // Update user active status with proper authorization
+    const response = await fetch(`http://localhost:5000/api/admin/users/${driverId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`  // Add the authorization header
+      },
+      body: JSON.stringify({
+        isActive: newStatus === 'active'
+      })
+    });
+    
+    if (response.ok) {
+      const updatedDrivers = drivers.map(driver => {
+        if (driver.id === driverId) {
+          return { ...driver, status: newStatus };
+        }
+        return driver;
       });
       
-      if (response.ok) {
-        const updatedDrivers = drivers.map(driver => {
+      setDrivers(updatedDrivers);
+      setFilteredDrivers(
+        filteredDrivers.map(driver => {
           if (driver.id === driverId) {
             return { ...driver, status: newStatus };
           }
           return driver;
-        });
-        
-        setDrivers(updatedDrivers);
-        setFilteredDrivers(
-          filteredDrivers.map(driver => {
-            if (driver.id === driverId) {
-              return { ...driver, status: newStatus };
-            }
-            return driver;
-          })
-        );
-        
-        toast.success(`Driver ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`);
-      } else {
-        toast.error('Failed to update driver status');
-      }
-    } catch (error) {
-      console.error('Error updating driver status:', error);
-      toast.error('Failed to update driver status');
+        })
+      );
+      
+      toast.success(`Driver ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`);
+    } else {
+      const errorData = await response.json().catch(() => null);
+      toast.error(errorData?.message || 'Failed to update driver status');
     }
-  };
+  } catch (error) {
+    console.error('Error updating driver status:', error);
+    toast.error('Failed to update driver status');
+  }
+};
   
   const viewDriverDetails = (driver) => {
     setSelectedDriver(driver);
@@ -464,11 +534,11 @@ const DeliveryManagement = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 overflow-hidden ml-15">
       <Toaster position="top-right" />
       <DashboardSidebar />
       
-      <div className="flex-grow overflow-y-auto">
+      <div className="flex-grow overflow-y-auto pl-64">
         <div className="p-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             <div>

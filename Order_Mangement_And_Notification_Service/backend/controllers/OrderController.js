@@ -1034,3 +1034,83 @@ exports.getDriverStats = async (req, res) => {
   }
 };
 
+// Get delivery analytics 
+exports.getDeliveryAnalytics = async (req, res) => {
+    try {
+        // Get count of active drivers from User service
+        let activeDrivers = 0;
+        try {
+            const response = await axios.get('http://localhost:5000/api/users/role/delivery_person', {
+                headers: { Authorization: req.headers.authorization }
+            });
+            
+            if (response.data && response.data.success) {
+                activeDrivers = response.data.totalUsers || 0;
+            }
+        } catch (error) {
+            console.warn('Failed to fetch active drivers count:', error.message);
+        }
+        
+        // Get all orders in the last 30 days
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        const orders = await Order.find({
+            placedAt: { $gte: thirtyDaysAgo },
+            orderStatus: { $in: ['Delivered', 'On the way', 'Ready for Pickup'] }
+        });
+        
+        // Count completed deliveries
+        const totalDeliveries = orders.filter(order => 
+            order.orderStatus === 'Delivered'
+        ).length;
+        
+        // Calculate average delivery time
+        let totalDeliveryTime = 0;
+        let deliveryTimeCount = 0;
+        
+        orders.forEach(order => {
+            if (order.orderStatus === 'Delivered' && order.statusTimestamps?.Delivered && order.placedAt) {
+                const placedTime = new Date(order.placedAt);
+                const deliveredTime = new Date(order.statusTimestamps.Delivered);
+                const minutesDiff = Math.round((deliveredTime - placedTime) / (1000 * 60));
+                
+                if (minutesDiff > 0 && minutesDiff < 300) { // Ignore outliers
+                    totalDeliveryTime += minutesDiff;
+                    deliveryTimeCount++;
+                }
+            }
+        });
+        
+        const averageDeliveryTime = deliveryTimeCount > 0 
+            ? Math.round(totalDeliveryTime / deliveryTimeCount) 
+            : 0;
+        
+        // Count deliveries in the last 7 days
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        
+        const deliveriesLastWeek = orders.filter(order => 
+            new Date(order.placedAt) >= sevenDaysAgo && 
+            order.orderStatus === 'Delivered'
+        ).length;
+        
+        res.status(200).json({
+            success: true,
+            analytics: {
+                activeDrivers,
+                totalDeliveries,
+                averageDeliveryTime,
+                deliveriesLastWeek
+            }
+        });
+    } catch (error) {
+        console.error('Error getting delivery analytics:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to get delivery analytics',
+            error: error.message
+        });
+    }
+};
+

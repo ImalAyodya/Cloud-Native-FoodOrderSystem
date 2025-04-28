@@ -13,6 +13,9 @@ import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { format as formatDate } from 'date-fns'; // Rename to avoid conflict with the existing formatDate function
 
+// Declare fetchPayments outside the component, so it can be reassigned
+let fetchPayments;
+
 const PaymentDashboard = () => {
   // State for payment data and UI control
   const [payments, setPayments] = useState([]);
@@ -95,8 +98,7 @@ const PaymentDashboard = () => {
           
           console.log('Alternative API connection successful, updating endpoint');
           // If successful, use this endpoint for data fetch
-          const originalFetchPayments = fetchPayments;
-          fetchPayments = async () => {
+          const fetchFromAlternativeEndpoint = async () => {
             setIsLoading(true);
             try {
               // Same code but different endpoint
@@ -113,7 +115,7 @@ const PaymentDashboard = () => {
               setIsLoading(false);
             }
           };
-          fetchPayments();
+          fetchFromAlternativeEndpoint();
         } catch (altError) {
           console.error('All connection attempts failed');
           setError('Could not connect to the Order Management Service. Please make sure the service is running.');
@@ -126,7 +128,7 @@ const PaymentDashboard = () => {
   }, []);
 
   // Fetch payment data from orders API
-  const fetchPayments = async () => {
+  fetchPayments = async () => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
