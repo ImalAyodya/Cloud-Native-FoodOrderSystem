@@ -87,9 +87,7 @@ const AdminSidebar = ({ user }) => {
       path: '/admin/restaurants',
       badge: null,
       subMenu: [
-        { name: 'All Restaurants', path: '/admin/restaurants' },
-        { name: 'Add Restaurant', path: '/admin/restaurants/add' },
-        { name: 'Categories', path: '/admin/restaurant-categories' },
+        { name: 'All Restaurants', path: '/restaurant/my' },
       ]
     },
     { 
@@ -104,10 +102,9 @@ const AdminSidebar = ({ user }) => {
       path: '/admin/users',
       badge: null,
       subMenu: [
-        { name: 'Customers', path: '/admin/users/customers' },
-        { name: 'Restaurant Owners', path: '/admin/users/restaurant-owners' },
-        { name: 'Delivery Personnel', path: '/admin/users/delivery' },
-        { name: 'Administrators', path: '/admin/users/administrators' },
+        { name: 'User Dashboard', path: '/user/dashboard' },
+        { name: 'All Users', path: '/user/management' },
+        
       ]
     },
     
@@ -117,9 +114,8 @@ const AdminSidebar = ({ user }) => {
       path: '/admin/payments',
       badge: null,
       subMenu: [
-        { name: 'Transactions', path: '/admin/payments/transactions' },
-        { name: 'Refunds', path: '/admin/payments/refunds' },
-        { name: 'Payment Methods', path: '/admin/payments/methods' },
+        { name: 'Payment Dashboard', path: '/admin/payments' },
+        
       ]
     },
     {
@@ -129,8 +125,6 @@ const AdminSidebar = ({ user }) => {
       badge: null,
       subMenu: [
         { name: 'Delivery Orders', path: '/admin/delivery/orders' },
-        { name: 'Drivers', path: '/admin/delivery/drivers' },
-        { name: 'Tracking', path: '/admin/delivery/tracking' },
       ]
     },
     {
@@ -140,8 +134,7 @@ const AdminSidebar = ({ user }) => {
       
       subMenu: [
         { name: 'All Messages', path: '/admin/contacts' },
-        { name: 'Unresolved', path: '/admin/contacts/unresolved' },
-        { name: 'Resolved', path: '/admin/contacts/resolved' }
+        
       ]
     },
   ];
@@ -165,9 +158,23 @@ const AdminSidebar = ({ user }) => {
           confirmButtonText: 'Yes, log out'
         }).then((result) => {
           if (result.isConfirmed) {
+            // Clear all authentication data from localStorage
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('role');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('refreshToken');
+            
+            // Clear any other app-specific data that should be removed on logout
+            localStorage.removeItem('adminSettings');
+            localStorage.removeItem('adminPreferences');
+            sessionStorage.clear(); // Clear any session storage data as well
+            
+            // Show success message
             toast.success('Successfully logged out');
-            // Add your logout logic here
-            // Example: navigate('/login');
+            
+            // Navigate to login page
+            navigate('/login');
           }
         });
       }
