@@ -14,28 +14,28 @@ class SocketService {
     console.log("Attempting to connect to WebSocket server...");
     this.connectionAttempts++;
     
-    // Try port 5001 first (Order Management service)
-    this.socket = io('http://localhost:5001', {
-      transports: ['websocket', 'polling'],
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      timeout: 10000
-    });
+    // Try port 5001 first
+    try {
+      this.socket = io('http://localhost:5001', {
+        transports: ['polling', 'websocket'], // Start with polling first, then upgrade
+        reconnectionAttempts: 3,
+        reconnectionDelay: 1000,
+        timeout: 10000
+      });
 
-    this.socket.on('connect', () => {
-      console.log('Socket connected successfully to port 5001');
-      this.connected = true;
-      this.connectionAttempts = 0;
-    });
+      this.socket.on('connect', () => {
+        console.log('Socket connected successfully to port 5001');
+        this.connected = true;
+        this.connectionAttempts = 0;
+      });
 
-    this.socket.on('connect_error', (err) => {
-      console.error(`Socket connection error (attempt ${this.connectionAttempts}):`, err);
-      this.connected = false;
-      
-      if (this.connectionAttempts >= this.maxAttempts && !this.connected) {
-        console.log("Maximum connection attempts reached. Falling back to direct API calls.");
-      }
-    });
+      this.socket.on('connect_error', (err) => {
+        console.error(`Socket connection error (attempt ${this.connectionAttempts}):`, err);
+        this.connected = false;
+      });
+    } catch (error) {
+      console.error('Error creating socket connection:', error);
+    }
 
     return this.socket;
   }
@@ -64,8 +64,12 @@ class SocketService {
 
   joinDriverRoom(driverId) {
     const socket = this.getSocket();
-    socket.emit('join_driver_room', driverId);
-    console.log(`Joined driver room: driver_${driverId}`);
+    if (socket && socket.connected) {
+      socket.emit('join_driver_room', driverId);
+      console.log(`Joined driver room: driver_${driverId}`);
+    } else {
+      console.warn('Socket not connected, unable to join driver room');
+    }
   }
   
   joinRestaurantRoom(restaurantId) {

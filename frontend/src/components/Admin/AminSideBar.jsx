@@ -127,11 +127,7 @@ const AdminSidebar = ({ user }) => {
       icon: <FaTruck size={20} />,
       path: '/admin/delivery',
       badge: null,
-      subMenu: [
-        { name: 'Delivery Orders', path: '/admin/delivery/orders' },
-        { name: 'Drivers', path: '/admin/delivery/drivers' },
-        { name: 'Tracking', path: '/admin/delivery/tracking' },
-      ]
+      
     },
     {
       name: 'Contact',

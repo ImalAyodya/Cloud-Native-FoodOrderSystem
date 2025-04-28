@@ -672,76 +672,72 @@ exports.getReadyForPickupOrders = async (req, res) => {
     }
 };
 
-// Update driver assignment
+// Update driver assignment status
 exports.updateDriverAssignment = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { 
-      driverId, 
-      assignmentStatus, 
+    const {
+      driverId,
+      assignmentStatus,
       assignmentHistoryUpdate,
-      rejectionReason, 
-      driverInfo,
-      driverCurrentLocation 
+      driverInfo
     } = req.body;
 
+    if (!orderId || !driverId || !assignmentStatus) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order ID, driver ID, and assignment status are required'
+      });
+    }
+
+    // Find the order
     const order = await Order.findOne({ orderId });
     
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: 'Order not found'
+        message: `Order with ID ${orderId} not found`
       });
     }
-    
+
     // Update assignment status
-    if (assignmentStatus) {
-      order.driverAssignmentStatus = assignmentStatus;
-    }
-    
-    // Add to assignment history
+    order.driverAssignmentStatus = assignmentStatus;
+    order.diliveryDriverId = driverId; // Update the driver ID field
+
+    // Add to assignment history if provided
     if (assignmentHistoryUpdate) {
       if (!order.assignmentHistory) {
         order.assignmentHistory = [];
       }
       order.assignmentHistory.push(assignmentHistoryUpdate);
     }
-    
-    // If accepted, set the driver ID
-    if (assignmentStatus === 'accepted') {
-      order.diliveryDriverId = driverId;
-      
-      // Add driver info if provided
-      if (driverInfo) {
-        order.driverInfo = driverInfo;
-      }
-      
-      // Add driver location if provided
-      if (driverCurrentLocation) {
-        order.driverCurrentLocation = driverCurrentLocation;
-      }
-    }
-    
-    // Set driver info for display
+
+    // Update driver info if provided
     if (driverInfo) {
-      order.driverInfo = driverInfo;
+      order.driverInfo = {
+        name: driverInfo.name || order.driverInfo?.name,
+        phone: driverInfo.phone || order.driverInfo?.phone,
+        vehicleType: driverInfo.vehicleType || order.driverInfo?.vehicleType,
+        licensePlate: driverInfo.licensePlate || order.driverInfo?.licensePlate
+      };
     }
-    
+
+    // Save the updated order
     await order.save();
-    
-    // Emit socket event if using Socket.io
+
+    // Emit a socket event for real-time updates
     if (req.io) {
-      req.io.to(`order_${orderId}`).emit('assignment_update', {
+      req.io.to(`order_${orderId}`).emit('driver_assignment_updated', {
         orderId,
         driverId,
         assignmentStatus,
         driverInfo: order.driverInfo
       });
     }
-    
+
     res.status(200).json({
       success: true,
-      message: `Driver assignment updated for order ${orderId}`,
+      message: 'Driver assignment updated successfully',
       order
     });
   } catch (error) {
@@ -890,6 +886,149 @@ exports.joinTrackingRoom = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to join tracking room',
+      error: error.message
+    });
+  }
+};
+
+// Get orders assigned to a specific driver
+exports.getDriverOrders = async (req, res) => {
+  try {
+    const { driverId } = req.params;
+    const { status } = req.query; // Optional filter by status
+    
+    const query = { 
+      diliveryDriverId: driverId
+    };
+    
+    // Filter by status if provided
+    if (status) {
+      query.orderStatus = status;
+    }
+    
+    // Find orders assigned to this driver
+    const orders = await Order.find(query);
+    
+    res.status(200).json({
+      success: true,
+      count: orders.length,
+      orders
+    });
+  } catch (error) {
+    console.error('Error fetching driver orders:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch driver orders',
+      error: error.message
+    });
+  }
+};
+
+// Get driver's delivery history
+exports.getDriverDeliveryHistory = async (req, res) => {
+  try {
+    const { driverId } = req.params;
+    
+    if (!driverId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Driver ID is required'
+      });
+    }
+    
+    // Find all orders that were assigned to this driver
+    const orders = await Order.find({ diliveryDriverId: driverId })
+      .sort({ placedAt: -1 });
+    
+    // Group orders by their status
+    const grouped = {
+      active: orders.filter(order => 
+        ['On the way', 'Ready for Pickup'].includes(order.orderStatus)
+      ),
+      completed: orders.filter(order => 
+        ['Delivered', 'Completed'].includes(order.orderStatus)
+      ),
+      cancelled: orders.filter(order => 
+        ['Cancelled'].includes(order.orderStatus)
+      ),
+      all: orders
+    };
+    
+    res.status(200).json({
+      success: true,
+      count: orders.length,
+      ordersByStatus: grouped,
+      orders: orders
+    });
+    
+  } catch (error) {
+    console.error('Error fetching driver delivery history:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch driver delivery history',
+      error: error.message
+    });
+  }
+};
+
+// Add this function to get driver delivery statistics
+exports.getDriverStats = async (req, res) => {
+  try {
+    const { driverId } = req.params;
+    
+    if (!driverId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Driver ID is required'
+      });
+    }
+    
+    // Find all orders delivered by this driver
+    const orders = await Order.find({ diliveryDriverId: driverId });
+    
+    // Calculate statistics
+    const total = orders.length;
+    const completed = orders.filter(order => 
+      order.orderStatus === 'Delivered' || order.orderStatus === 'Completed'
+    ).length;
+    const cancelled = orders.filter(order => 
+      order.orderStatus === 'Cancelled'
+    ).length;
+    
+    // Calculate average rating if available
+    let rating = 0;
+    const ratedOrders = orders.filter(order => order.driverRating && order.driverRating > 0);
+    if (ratedOrders.length > 0) {
+      rating = ratedOrders.reduce((sum, order) => sum + order.driverRating, 0) / ratedOrders.length;
+    }
+    
+    // Calculate on-time delivery percentage
+    const onTimeDeliveries = orders.filter(order => 
+      order.orderStatus === 'Delivered' && 
+      order.deliveredAt && 
+      order.estimatedDeliveryTime &&
+      new Date(order.deliveredAt) <= new Date(order.estimatedDeliveryTime)
+    ).length;
+    
+    const onTimePercentage = total > 0 ? (onTimeDeliveries / total) * 100 : 0;
+    
+    res.status(200).json({
+      success: true,
+      stats: {
+        total,
+        completed,
+        cancelled,
+        rating,
+        onTimePercentage: Math.round(onTimePercentage),
+        onTimeDeliveries
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error getting driver stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get driver statistics',
       error: error.message
     });
   }

@@ -4,7 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { motion } from 'framer-motion';
 import { toast, Toaster } from 'react-hot-toast';
-import { FaMotorcycle, FaLocationArrow, FaPowerOff, FaBox } from 'react-icons/fa';
+import { 
+  FaMotorcycle, FaLocationArrow, FaPowerOff, FaBox, 
+  FaTruck, FaHistory, FaUser
+} from 'react-icons/fa';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import socketService from '../../services/socketService';
@@ -29,6 +32,16 @@ const DeliveryDashboard = () => {
   const [watchId, setWatchId] = useState(null);
   const [pendingAssignments, setPendingAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [readyForPickupOrders, setReadyForPickupOrders] = useState([]);
+
+  // Add this helper function before your useEffect that calls it
+  const getCurrentOrderId = () => {
+    // Check if there's a current order in progress
+    if (pendingAssignments && pendingAssignments.length > 0) {
+      return pendingAssignments[0].orderId;
+    }
+    return null;
+  };
 
   useEffect(() => {
     // DEBUGGING: Add detailed authentication debugging
@@ -206,6 +219,45 @@ const DeliveryDashboard = () => {
     
     checkExistingAssignments();
 
+    // Fetch all Ready for Pickup orders
+    const fetchReadyForPickupOrders = async () => {
+      try {
+        const response = await fetch('http://localhost:5001/api/orders/ready-for-pickup');
+        
+        if (!response.ok) {
+          console.warn(`Failed to fetch ready for pickup orders (Status: ${response.status})`);
+          return [];
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          console.log(`Found ${data.count} orders ready for pickup`);
+          if (data.orders && Array.isArray(data.orders)) {
+            setReadyForPickupOrders(data.orders);
+            return data.orders;
+          }
+        }
+        return [];
+      } catch (error) {
+        console.error('Error fetching ready for pickup orders:', error);
+        return [];
+      }
+    };
+
+    fetchReadyForPickupOrders();
+
+    // Fetch ready for pickup orders periodically
+    const fetchOrders = async () => {
+      const orders = await fetchReadyForPickupOrders();
+      console.log("Ready for pickup orders:", orders);
+    };
+
+    fetchOrders();
+
+    // Optionally, set up polling
+    const intervalId = setInterval(fetchOrders, 60000); // every minute
+
     // Check token expiration if applicable
     if (userData.expiresAt) {
       const now = new Date();
@@ -234,8 +286,25 @@ const DeliveryDashboard = () => {
       }
       socket.off('new_assignment');
       socket.off('assignment_update');
+      clearInterval(intervalId);
     };
   }, [navigate, watchId]);
+
+  // Auto-update driver location when online
+  useEffect(() => {
+    if (isOnline && currentLocation && watchId) {
+      // Get current order from state or context
+      const currentOrderId = getCurrentOrderId(); // implement this function
+      
+      if (currentOrderId) {
+        updateDriverLocation(
+          currentOrderId,
+          currentLocation[0], // latitude
+          currentLocation[1]  // longitude
+        );
+      }
+    }
+  }, [isOnline, currentLocation, watchId]);
 
   // Add logging to online/offline toggle
   const toggleOnlineStatus = () => {
@@ -254,12 +323,37 @@ const DeliveryDashboard = () => {
           console.log(`Location updated: [${latitude}, ${longitude}]`);
           setCurrentLocation([latitude, longitude]);
           
-          const userData = JSON.parse(localStorage.getItem('userData'));
-          console.log(`Emitting driver_online event for driver ${userData.user._id}`);
-          socketService.getSocket().emit('driver_online', {
-            driverId: userData.user._id,
-            location: { latitude, longitude }
-          });
+          try {
+            const userData = JSON.parse(localStorage.getItem('userData'));
+            
+            // Try to emit socket event if connected
+            const socket = socketService.getSocket();
+            if (socket && socket.connected) {
+              console.log(`Emitting driver_online event for driver ${userData.user._id}`);
+              socket.emit('driver_online', {
+                driverId: userData.user._id,
+                location: { latitude, longitude }
+              });
+            }
+            
+            // Also update location via REST API as a fallback
+            fetch(`http://localhost:5001/api/drivers/${userData.user._id}/location`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${userData.token}`
+              },
+              body: JSON.stringify({ 
+                latitude,
+                longitude
+              })
+            }).catch(error => {
+              console.log('REST API fallback also failed:', error);
+              // Continue anyway - the map UI will still work
+            });
+          } catch (error) {
+            console.error('Error in location update:', error);
+          }
         },
         (error) => {
           console.error('Error getting location:', error);
@@ -283,10 +377,17 @@ const DeliveryDashboard = () => {
         setWatchId(null);
       }
 
-      const userData = JSON.parse(localStorage.getItem('userData'));
-      socketService.getSocket().emit('driver_offline', {
-        driverId: userData.user._id
-      });
+      try {
+        const userData = JSON.parse(localStorage.getItem('userData'));
+        const socket = socketService.getSocket();
+        if (socket && socket.connected) {
+          socket.emit('driver_offline', {
+            driverId: userData.user._id
+          });
+        }
+      } catch (error) {
+        console.error('Error in offline status update:', error);
+      }
 
       setIsOnline(false);
       toast.success('You are now offline');
@@ -299,21 +400,71 @@ const DeliveryDashboard = () => {
       console.log(`Accepting order ${orderId}`);
       const userData = JSON.parse(localStorage.getItem('userData'));
       
-      console.log("Emitting order_response with 'accepted'");
-      socketService.getSocket().emit('order_response', {
-        driverId: userData.user._id,
-        orderId,
-        response: 'accepted'
+      // First update the order in the database through the API
+      const response = await fetch(`http://localhost:5001/api/orders/${orderId}/driver-assignment`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${userData.token}`
+        },
+        body: JSON.stringify({
+          driverId: userData.user._id,
+          assignmentStatus: 'accepted',
+          assignmentHistoryUpdate: {
+            driverId: userData.user._id,
+            status: 'accepted',
+            timestamp: new Date()
+          },
+          driverInfo: {
+            name: userData.user.name,
+            phone: userData.user.phone || 'Not provided',
+            vehicleType: 'Car', // You could store this in user profile
+            licensePlate: userData.user.licensePlate || 'Not provided' // You could store this in user profile
+          }
+        })
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to accept order');
+      }
+      
+      // Also emit a socket event for real-time updates
+      const socket = socketService.getSocket();
+      if (socket && socket.connected) {
+        socket.emit('order_response', {
+          driverId: userData.user._id,
+          orderId,
+          response: 'accepted'
+        });
+      }
+
+      // Update order status to "On the way"
+      const statusResponse = await fetch(`http://localhost:5001/api/orders/update-status/${orderId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${userData.token}`
+        },
+        body: JSON.stringify({
+          newStatus: 'On the way'
+        })
+      });
+      
+      if (!statusResponse.ok) {
+        console.warn('Could not update order status, but assignment was successful');
+      }
 
       // Remove from pending assignments
       setPendingAssignments(prev => prev.filter(a => a.orderId !== orderId));
+      
+      toast.success('Order accepted successfully');
       
       // Navigate to delivery management page
       navigate(`/driver/delivery/${userData.user._id}/${orderId}`);
     } catch (error) {
       console.error('Error accepting order:', error);
-      toast.error('Failed to accept order');
+      toast.error(`Failed to accept order: ${error.message}`);
     }
   };
 
@@ -337,6 +488,73 @@ const DeliveryDashboard = () => {
     }
   };
 
+  // Assign a driver to an order
+  const assignDriverToOrder = async (orderId, driverId, driverInfo) => {
+    try {
+      const response = await fetch(`http://localhost:5001/api/orders/${orderId}/driver-assignment`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          driverId: driverId,
+          assignmentStatus: 'assigned', // or 'accepted', 'rejected'
+          assignmentHistoryUpdate: {
+            driverId: driverId,
+            status: 'accepted',
+            timestamp: new Date()
+          },
+          driverInfo: {
+            name: driverInfo.name,
+            phone: driverInfo.phone,
+            vehicleType: driverInfo.vehicleType,
+            licensePlate: driverInfo.licensePlate
+          }
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to assign driver to order');
+      }
+      
+      const data = await response.json();
+      console.log('Driver assignment updated:', data);
+      
+      return data.success;
+    } catch (error) {
+      console.error('Error assigning driver:', error);
+      return false;
+    }
+  };
+
+  // Update driver location for an order
+  const updateDriverLocation = async (orderId, latitude, longitude) => {
+    try {
+      const response = await fetch(`http://localhost:5001/api/orders/${orderId}/update-driver-location`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          driverLocation: {
+            latitude: latitude,
+            longitude: longitude
+          }
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update driver location');
+      }
+      
+      const data = await response.json();
+      return data.success;
+    } catch (error) {
+      console.error('Error updating driver location:', error);
+      return false;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Toaster position="top-right" />
@@ -349,17 +567,33 @@ const DeliveryDashboard = () => {
               <h1 className="text-2xl font-bold">Driver Dashboard</h1>
               <p className="text-sm opacity-90">Manage your deliveries</p>
             </div>
-            <button
-              onClick={toggleOnlineStatus}
-              className={`px-6 py-2 rounded-full flex items-center gap-2 transition-colors ${
-                isOnline 
-                  ? 'bg-red-500 hover:bg-red-600' 
-                  : 'bg-green-500 hover:bg-green-600'
-              }`}
-            >
-              <FaPowerOff />
-              {isOnline ? 'Go Offline' : 'Go Online'}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => navigate('/driver/profile')}
+                className="px-6 py-2 rounded-full flex items-center gap-2 transition-colors bg-white text-orange-600 hover:bg-orange-50"
+              >
+                <FaUser />
+                My Profile
+              </button>
+              <button
+                onClick={() => navigate('/driver/my-deliveries')}
+                className="px-6 py-2 rounded-full flex items-center gap-2 transition-colors bg-white text-orange-600 hover:bg-orange-50"
+              >
+                <FaHistory />
+                My Deliveries
+              </button>
+              <button
+                onClick={toggleOnlineStatus}
+                className={`px-6 py-2 rounded-full flex items-center gap-2 transition-colors ${
+                  isOnline 
+                    ? 'bg-red-500 hover:bg-red-600' 
+                    : 'bg-green-500 hover:bg-green-600'
+                }`}
+              >
+                <FaPowerOff />
+                {isOnline ? 'Go Offline' : 'Go Online'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -440,6 +674,48 @@ const DeliveryDashboard = () => {
                 {pendingAssignments.length === 0 && (
                   <p className="text-gray-500 text-center py-4">
                     No pending assignments
+                  </p>
+                )}
+              </div>
+            </motion.div>
+
+            {/* Available Orders Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-white rounded-lg shadow-md overflow-hidden"
+            >
+              <div className="p-4 bg-green-50 border-b border-green-100">
+                <h2 className="font-semibold flex items-center gap-2">
+                  <FaTruck />
+                  Available Orders ({readyForPickupOrders.length})
+                </h2>
+              </div>
+              <div className="p-4 divide-y divide-gray-100">
+                {readyForPickupOrders.map((order) => (
+                  <div key={order.orderId} className="py-4 first:pt-0 last:pb-0">
+                    <div className="flex justify-between mb-2">
+                      <div>
+                        <h3 className="font-medium">Order #{order.orderId}</h3>
+                        <p className="text-sm text-gray-600">{order.restaurantName}</p>
+                        <p className="text-xs text-gray-500">{order.customer.address}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">${order.totalAmount?.toFixed(2)}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleAcceptOrder(order.orderId)}
+                      className="w-full py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+                    >
+                      Accept Order
+                    </button>
+                  </div>
+                ))}
+                {readyForPickupOrders.length === 0 && (
+                  <p className="text-gray-500 text-center py-4">
+                    No orders available for pickup
                   </p>
                 )}
               </div>
