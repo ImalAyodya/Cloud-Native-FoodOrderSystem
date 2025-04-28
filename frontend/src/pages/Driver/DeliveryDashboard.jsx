@@ -400,6 +400,10 @@ const DeliveryDashboard = () => {
       console.log(`Accepting order ${orderId}`);
       const userData = JSON.parse(localStorage.getItem('userData'));
       
+      // Get phone number from localStorage (where it's stored during login)
+      const userPhone = localStorage.getItem('userPhone') || userData.user.phone || 'Not provided';
+      console.log('Using phone number from localStorage:', userPhone);
+      
       // First update the order in the database through the API
       const response = await fetch(`http://localhost:5001/api/orders/${orderId}/driver-assignment`, {
         method: 'PUT',
@@ -417,7 +421,7 @@ const DeliveryDashboard = () => {
           },
           driverInfo: {
             name: userData.user.name,
-            phone: userData.user.phone || 'Not provided',
+            phone: userPhone, // Using phone from localStorage
             vehicleType: 'Car', // You could store this in user profile
             licensePlate: userData.user.licensePlate || 'Not provided' // You could store this in user profile
           }
@@ -491,6 +495,14 @@ const DeliveryDashboard = () => {
   // Assign a driver to an order
   const assignDriverToOrder = async (orderId, driverId, driverInfo) => {
     try {
+      // Get phone number from localStorage if not provided in driverInfo
+      const userPhone = localStorage.getItem('userPhone');
+      if (userPhone && (!driverInfo.phone || driverInfo.phone === 'Not provided')) {
+        driverInfo.phone = userPhone;
+      }
+      
+      console.log('Using driver phone number:', driverInfo.phone);
+      
       const response = await fetch(`http://localhost:5001/api/orders/${orderId}/driver-assignment`, {
         method: 'PUT',
         headers: {
