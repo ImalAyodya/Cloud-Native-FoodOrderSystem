@@ -49,7 +49,10 @@ import ResetPassword from "./pages/User/ResetPassword";
 import UserProfile from "./pages/User/UserProfile";
 import EditUser from "./pages/Admin/User/EditUser";
 
+
+import RestaurantRegister from "./pages/Main/RestaurantRegister"
 import authService from './services/authService';
+import PaymentDashboard from "./pages/Admin/Payment/PaymentDashboard";
 
 function App() {
   useEffect(() => {
@@ -66,6 +69,7 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/login" element={<Login />} />
         <Route path='/register' element={<Register />} />
+        <Route path='/restaurant/register' element={<RestaurantRegister />} />
         <Route path="/home" element={<Home />} />
         <Route path="/verification-sent" element={<VerifyEmail />} />
 
@@ -109,16 +113,12 @@ function App() {
             <AdminOrderDashboard />
           </ProtectedRoutes>
         } />
-        {/* <Route path="/user/dashboard" element={
-          <ProtectedRoutes requireRole={["admin"]}>
-            <UserDashboard />
-          </ProtectedRoutes>
-        } />
-        <Route path="/user/management" element={
-          <ProtectedRoutes requireRole={["admin"]}>
-            <UserManagement />
-          </ProtectedRoutes>
-        } /> */}
+
+        {/* Order Update Page */}
+        <Route path="/orders/update/:orderId" 
+          element={<ProtectedRoutes requireRole={["admin"]}>
+            <OrderUpdatePage />
+        </ProtectedRoutes>} />
 
         {/* User Management Protected Routes */}
         <Route path="/user/management" element={
@@ -136,12 +136,6 @@ function App() {
             <EditUser />
           </ProtectedRoutes>
         } />
-
-        <Route path="/user/me" element={
-          <ProtectedRoutes requireRole={["customer"]}>
-            <UserProfile />
-          </ProtectedRoutes>
-        } />
         
         {/* Public Authentication Routes */}
         <Route path="/verify-email" element={<VerifyEmail />} />
@@ -156,36 +150,82 @@ function App() {
             </ProtectedRoutes>
           }
         />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/dashboard" element={
+          <ProtectedRoutes requireRole={["admin"]}>
+            <AdminDashboard />
+          </ProtectedRoutes>
+      } />
         <Route 
           path="user/dashboard" 
           element={<ProtectedRoutes requireRole={["admin"]}>
               <UserDashboard />
           </ProtectedRoutes>} 
         />
-        <Route path="user/management" element={<UserManagement />} />
+        
         <Route path="unauthorized" element={<p className="font bold text-3xl mt-20 ml-20">Unauthorized</p>} />
 
-        <Route path="/admin/contacts" element={<ContactTable />} />
-        <Route path="/admin/contacts/:id" element={<ContactDetail />} />
+       
           
 
         {/* Admin Pages */}
-        <Route path="/admin" element={<AdminLayout />} />
-        <Route path="/admin/orders" element={<AllOrders />} />
-        <Route path="/order/dashboard" element={<AdminOrderDashboard />} />
+        <Route path="/admin" 
+          element={<ProtectedRoutes requireRole={["admin"]}>
+            <AdminLayout />
+        </ProtectedRoutes>} />
+
+        <Route path="/admin/orders" 
+          element={<ProtectedRoutes requireRole={["admin"]}>
+            <AllOrders />
+        </ProtectedRoutes>} />
+
+        <Route path="/order/dashboard" 
+          element={<ProtectedRoutes requireRole={["admin"]}>
+            <AdminOrderDashboard />
+        </ProtectedRoutes>} />
+
+        <Route path="/admin/payments" element={
+          <ProtectedRoutes requireRole={["admin"]}>
+            <PaymentDashboard />
+          </ProtectedRoutes>
+        } />
 
         {/* Restaurant Management Pages */}
-        <Route path="/restaurant/dashboard" element={<RestaurantManagementDashboard />} />
-        <Route path="/restaurant/list" element={<RestaurantList />} />
-        <Route path="/restaurant/:restaurantId/menu" element={<MenuItemManagement />} />
-        <Route path="/restaurant/my-restaurants" element={<MyRestaurants />} />
-        <Route path="/restaurant/add" element={<AddRestaurant />} />
-        <Route path="/restaurant/dashboard/:id" element={<RestaurantManagementDashboard />} />
+        <Route path="/restaurant/dashboard" 
+          element={<ProtectedRoutes requireRole={["admin"]}>
+            <RestaurantManagementDashboard />
+        </ProtectedRoutes>} />
 
-        <Route path="/restaurant/:id/orders" element={<RestaurantOrdersPage />} />
-        {/* Order Update Page */}
-        <Route path="/orders/update/:orderId" element={<OrderUpdatePage />} />
+        <Route path="/restaurant/list" 
+          element={<ProtectedRoutes requireRole={["admin"]}>
+            <RestaurantList />
+        </ProtectedRoutes>} />
+
+        <Route path="/restaurant/:restaurantId/menu" 
+          element={<ProtectedRoutes requireRole={["admin"]}>
+            <MenuItemManagement />
+        </ProtectedRoutes>} />
+
+        <Route path="/restaurant/my-restaurants" 
+          element={<ProtectedRoutes requireRole={["admin","restaurant_owner"]}>
+            <MyRestaurants />
+        </ProtectedRoutes>} />
+
+        <Route path="/restaurant/add" 
+          element={<ProtectedRoutes requireRole={["admin","restaurant_owner"]}>
+            <AddRestaurant />
+        </ProtectedRoutes>} />
+
+        <Route path="/restaurant/dashboard/:id" 
+          element={<ProtectedRoutes requireRole={["admin","restaurant_owner"]}>
+            <RestaurantManagementDashboard />
+        </ProtectedRoutes>} />
+
+        <Route path="/restaurant/:id/orders" 
+          element={<ProtectedRoutes requireRole={["admin","restaurant_owner"]}> 
+            <RestaurantOrdersPage /> 
+        </ProtectedRoutes>} />
+
+        
 
         {/* Payment routes */}
         <Route path="/payment/success" element={<PaymentSuccessPage />} />

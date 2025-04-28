@@ -76,7 +76,7 @@ const LoginPage = () => {
       setTimeout(() => {
         if (userData.user.role === 'admin') {
           navigate('/admin');
-        } else if (userData.user.role === 'restaurant_admin') {
+        } else if (userData.user.role === 'restaurant_owner') {
           navigate('/restaurant/my-restaurants');
         } else {
           navigate('/home'); 

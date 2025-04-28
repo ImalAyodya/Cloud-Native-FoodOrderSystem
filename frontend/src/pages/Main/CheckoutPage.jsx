@@ -246,7 +246,7 @@ const Checkout = () => {
         // Cash on delivery
         const updatedOrders = generatedOrders.map((order) => ({
           ...order,
-          paymentMethod: 'Cash on Delivery',
+          paymentMethod: 'Cash on delivery', // Changed from 'Cash on Delivery'
           paymentStatus: 'Pending',
         }));
         

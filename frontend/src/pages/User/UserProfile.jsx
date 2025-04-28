@@ -128,7 +128,7 @@ const UserProfile = () => {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-gray-100">
+      <div className="flex h-screen bg-gray-100 ml-40">
         <DashboardSidebar />
         <div className="flex-1 p-10 flex justify-center items-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>

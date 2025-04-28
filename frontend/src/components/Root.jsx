@@ -46,11 +46,11 @@ const Root = () => {
         if (user.role === 'admin') {
           navigate('/order/dashboard');
         } else if (user.role === 'restaurant_owner') {
-          navigate('/restaurant/dashboard');
+          navigate('restaurant/my-restaurants');
         } else if (user.role === 'delivery_person') {
           navigate('/delivery/home');
         } else if (user.role === 'customer') {
-          navigate('/dashboard');
+          navigate('/home');
         } else {
           navigate('/login');
         }
