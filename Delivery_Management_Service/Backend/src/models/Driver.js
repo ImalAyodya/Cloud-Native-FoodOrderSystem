@@ -1,22 +1,65 @@
 const mongoose = require('mongoose');
 
 const driverSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true },
-  phone: { type: String, required: true },
-  isAvailable: { type: Boolean, default: true },
+  userId: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  name: {
+    type: String,
+    required: true
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  phone: {
+    type: String,
+    required: true
+  },
+  vehicleType: {
+    type: String,
+    enum: ['Car', 'Motorcycle', 'Bicycle', 'Scooter'],
+    default: 'Car'
+  },
+  licensePlate: {
+    type: String
+  },
+  isAvailable: {
+    type: Boolean,
+    default: false
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
   currentLocation: {
-    type: { type: String, default: 'Point' },
-    coordinates: [Number]  // [longitude, latitude]
-  },                                  
-  ratings: [{
-    orderId: { type: mongoose.Schema.Types.ObjectId },
-    rating: Number
-  }],
-  averageRating: { type: Number, default: 0 }
+    latitude: Number,
+    longitude: Number,
+    lastUpdated: Date
+  },
+  pendingAssignments: [String], // Order IDs
+  currentOrders: [String], // Order IDs
+  completedOrders: [String], // Order IDs
+  rating: {
+    average: {
+      type: Number,
+      default: 0
+    },
+    count: {
+      type: Number,
+      default: 0
+    }
+  }
 }, { timestamps: true });
 
-// Create geo index for location queries
-driverSchema.index({ currentLocation: '2dsphere' });
+// Add method to find by userId (for authentication purposes)
+driverSchema.statics.findByUserId = function(userId) {
+  return this.findOne({ userId });
+};
 
-module.exports = mongoose.model('Driver', driverSchema);
+const Driver = mongoose.model('Driver', driverSchema);
+
+module.exports = Driver;

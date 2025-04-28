@@ -63,6 +63,39 @@ exports.updateOrderStatus = async (req, res) => {
             });
         }
 
+        // Save the updated order
+        await order.save();
+
+        // Emit the status change to all clients tracking this order
+        if (req.io) {
+            req.io.to(`order_${orderId}`).emit('order_status_update', {
+                orderId,
+                status: newStatus,
+                timestamp: new Date(),
+                driverId: order.diliveryDriverId,
+                driverInfo: order.driverInfo,
+                driverLocation: order.driverCurrentLocation
+            });
+            
+            // Also notify the restaurant if applicable
+            if (order.restaurant) {
+                req.io.to(`restaurant_${order.restaurant}`).emit('order_status_update', {
+                    orderId,
+                    status: newStatus,
+                    timestamp: new Date()
+                });
+            }
+            
+            // Notify driver if assigned
+            if (order.diliveryDriverId) {
+                req.io.to(`driver_${order.diliveryDriverId}`).emit('order_status_update', {
+                    orderId,
+                    status: newStatus,
+                    timestamp: new Date()
+                });
+            }
+        }
+
         res.status(200).json({
             success: true,
             message: `Order status updated to '${newStatus}'`,

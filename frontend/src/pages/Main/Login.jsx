@@ -62,38 +62,53 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      // authService.login already handles setting tokens in localStorage
-      // and returns only response.data, not the full response object
-      const userData = await authService.login(formData.email, formData.password);
+      console.log("Login attempt:", formData.email);
+      const response = await authService.login(formData.email, formData.password);
+      console.log("Login response:", response);
+
+      // Store user data properly
+      if (response && response.user) {
+        console.log("Storing user data:", response);
+        localStorage.setItem('userData', JSON.stringify(response));
+        
+        console.log("Checking stored data immediately after setting");
+        const storedData = localStorage.getItem('userData');
+        console.log("Raw stored data:", storedData);
+        console.log("Parsed stored data:", JSON.parse(storedData));
+      }
       
-      // Show success toast with custom styling
-      toast.success('Login successful!', {
-        icon: '🍽️',
-        progressStyle: { background: '#f97316' },
-      });
+      toast.success('Login successful!');
       
-      // Redirect based on user role with slight delay for toast visibility
       setTimeout(() => {
-        if (userData.user.role === 'admin') {
-          navigate('/admin');
-        } else if (userData.user.role === 'restaurant_owner') {
-          navigate('/restaurant/my-restaurants');
+        // Re-read data from localStorage to ensure it's current
+        const userData = JSON.parse(localStorage.getItem('userData'));
+        console.log("userData before navigation:", userData);
+        
+        if (userData && userData.user) {
+          const role = userData.user.role;
+          console.log(`User role: ${role}, navigating to appropriate dashboard`);
+          
+          if (role === 'admin') {
+            navigate('/admin');
+          } 
+          else if (role === 'delivery_person') {
+            console.log("Navigating to DeliveryDashboard");
+            navigate('/DeliveryDashboard');
+          }
+          else if (role === 'restaurant_admin') {
+            navigate('/restaurant/my-restaurants');
+          } 
+          else {
+            navigate('/home');
+          }
         } else {
-          navigate('/home'); 
+          console.error("Invalid user data structure after login");
+          navigate('/login');
         }
       }, 1000);
     } catch (error) {
-      console.error('Login error:', error);
-      
-      // Better error handling
-      if (error.response) {
-        const errorMessage = error.response.data?.message || 'Invalid credentials. Please try again.';
-        toast.error(errorMessage);
-      } else if (error.request) {
-        toast.error('No response from server. Please check your internet connection.');
-      } else {
-        toast.error('Login failed. Please try again later.');
-      }
+      console.error("Login error:", error);
+      toast.error('Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }

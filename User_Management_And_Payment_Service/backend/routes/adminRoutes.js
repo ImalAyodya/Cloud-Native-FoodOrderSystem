@@ -5,6 +5,7 @@ const auth = require('../middleware/authMiddleware');
 const roleCheck = require('../middleware/roleMiddleware');
 
 // Admin routes (all protected)
+//localhost:5000/api/admin/users
 router.get('/users', auth, roleCheck(['admin']), adminController.getUsers);
 router.get('/users/:id', auth, roleCheck(['admin']), adminController.getUserById);
 router.post('/users', auth, roleCheck(['admin']), adminController.createUser);

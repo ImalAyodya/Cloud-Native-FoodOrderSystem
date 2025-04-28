@@ -1,63 +1,116 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { toast, Toaster } from 'react-hot-toast';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import socketService from '../../services/socketService';
+import axios from 'axios';
 
-const DriverDeliveryManager = ({ deliveryId, driverId }) => {
-  const [delivery, setDelivery] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [position, setPosition] = useState(null);
-  const positionWatchId = useRef(null);
+// Define icons for the map
+const driverIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
 
-  // Fetch delivery information
+const restaurantIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+const customerIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+// Component that updates the map center when locations change
+function MapCenterUpdater({ positions }) {
+  const map = useMap();
+  
   useEffect(() => {
-    const fetchDelivery = async () => {
+    if (positions.length > 0) {
+      const bounds = L.latLngBounds(positions);
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }, [positions, map]);
+  
+  return null;
+}
+
+const DriverDeliveryManager = () => {
+  const { driverId, orderId } = useParams();
+  const navigate = useNavigate();
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [currentPosition, setCurrentPosition] = useState(null);
+  const [restaurantPosition, setRestaurantPosition] = useState(null);
+  const [customerPosition, setCustomerPosition] = useState(null);
+  const [watchId, setWatchId] = useState(null);
+  const [error, setError] = useState(null);
+
+  // Fetch order details and set up location tracking
+  useEffect(() => {
+    const fetchOrderDetails = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:5002/api/deliveries/${deliveryId}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch delivery data');
+        const response = await axios.get(`http://localhost:5001/api/orders/orders/${orderId}`);
+        
+        if (!response.data || !response.data.success) {
+          throw new Error(response.data?.message || 'Failed to fetch order');
         }
-        const data = await response.json();
-        setDelivery(data);
+        
+        const orderData = response.data.order;
+        setOrder(orderData);
+        
+        // Extract restaurant and customer positions if available
+        if (orderData.restaurantLocation?.latitude && orderData.restaurantLocation?.longitude) {
+          setRestaurantPosition([orderData.restaurantLocation.latitude, orderData.restaurantLocation.longitude]);
+        }
+        
+        if (orderData.customer?.coordinates?.latitude && orderData.customer?.coordinates?.longitude) {
+          setCustomerPosition([orderData.customer.coordinates.latitude, orderData.customer.coordinates.longitude]);
+        }
+        
+        // If customer has address but no coordinates, we could use geocoding here
+        
         setLoading(false);
       } catch (err) {
-        setError('Failed to load delivery information');
+        console.error('Error fetching order details:', err);
+        setError('Failed to load order details');
         setLoading(false);
-        console.error('Error fetching delivery:', err);
       }
     };
-
-    fetchDelivery();
-  }, [deliveryId]);
-
-  // Watch driver's position
-  useEffect(() => {
-    if ('geolocation' in navigator) {
-      // Get initial position
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setPosition([longitude, latitude]);
-          
-          // Update driver location on server
-          updateDriverLocation([longitude, latitude]);
-        },
-        (err) => {
-          console.error('Error getting location:', err);
-          setError('Failed to get your location. Please enable location services.');
-        }
-      );
+    
+    // Start tracking driver location
+    const startLocationTracking = () => {
+      if (!navigator.geolocation) {
+        toast.error('Geolocation is not supported by your browser');
+        return;
+      }
       
-      // Watch position changes
-      positionWatchId.current = navigator.geolocation.watchPosition(
+      const id = navigator.geolocation.watchPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          setPosition([longitude, latitude]);
+          setCurrentPosition([latitude, longitude]);
           
-          // Update driver location on server
-          updateDriverLocation([longitude, latitude]);
+          // Update location in backend
+          updateDriverLocation(latitude, longitude);
         },
-        (err) => {
-          console.error('Error watching position:', err);
+        (error) => {
+          console.error('Error watching position:', error);
+          toast.error('Failed to track your location');
         },
         {
           enableHighAccuracy: true,
@@ -65,245 +118,240 @@ const DriverDeliveryManager = ({ deliveryId, driverId }) => {
           timeout: 27000
         }
       );
-    } else {
-      setError('Geolocation is not supported by this browser.');
-    }
+      
+      setWatchId(id);
+    };
     
-    // Clean up
+    fetchOrderDetails();
+    startLocationTracking();
+    
+    // Initialize socket connection
+    const socket = socketService.getSocket();
+    socketService.joinOrderRoom(orderId);
+    
+    // Listen for order status updates
+    const unregisterStatusListener = socketService.registerOrderStatusListener((data) => {
+      if (data.orderId === orderId) {
+        setOrder(prev => ({ ...prev, orderStatus: data.status }));
+        toast.success(`Order status updated to: ${data.status}`);
+      }
+    });
+    
     return () => {
-      if (positionWatchId.current) {
-        navigator.geolocation.clearWatch(positionWatchId.current);
-      }
+      // Clean up geolocation and socket listeners
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+      unregisterStatusListener();
     };
-  }, [deliveryId]);
-
-  // Update driver location on server
-  const updateDriverLocation = async (coordinates) => {
+  }, [orderId, driverId]);
+  
+  // Update driver location in backend
+  const updateDriverLocation = async (latitude, longitude) => {
     try {
-      const response = await fetch(
-        `http://localhost:5002/api/deliveries/${deliveryId}/driver-location`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ coordinates }),
-        }
-      );
-      if (!response.ok) {
-        throw new Error('Failed to update driver location');
-      }
+      await axios.put(`http://localhost:5001/api/orders/${orderId}/update-driver-location`, {
+        driverLocation: { latitude, longitude }
+      });
     } catch (err) {
-      console.error('Error updating location:', err);
-    }
-  };
-
-  // Update delivery status
-  const updateDeliveryStatus = async (status) => {
-    try {
-      const response = await fetch(
-        `http://localhost:5002/api/deliveries/${deliveryId}/status`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ status, driverLocation: position }),
-        }
-      );
-      if (!response.ok) {
-        throw new Error('Failed to update delivery status');
-      }
-      const data = await response.json();
-      setDelivery(data);
-    } catch (err) {
-      setError('Failed to update delivery status');
-      console.error('Error updating status:', err);
+      console.error('Error updating driver location:', err);
     }
   };
   
-  // Helper function to format coordinates
-  const formatCoordinates = (coords) => {
-    if (!coords || !coords.length) return "N/A";
-    return `[${coords[0].toFixed(6)}, ${coords[1].toFixed(6)}]`;
+  // Update order status
+  const updateOrderStatus = async (newStatus) => {
+    try {
+      await axios.put(`http://localhost:5001/api/orders/update-status/${orderId}`, {
+        newStatus
+      });
+      
+      setOrder(prev => ({ ...prev, orderStatus: newStatus }));
+      toast.success(`Order status updated to: ${newStatus}`);
+    } catch (err) {
+      console.error('Error updating order status:', err);
+      toast.error('Failed to update order status');
+    }
   };
   
-  // Helper function to get status display
-  const getStatusDisplay = (status) => {
-    const statusMap = {
-      'pending': { text: 'PENDING', color: 'bg-yellow-500' },
-      'driver_assigned': { text: 'ASSIGNED', color: 'bg-blue-500' },
-      'picked_up': { text: 'PICKED UP', color: 'bg-purple-500' },
-      'in_transit': { text: 'IN TRANSIT', color: 'bg-indigo-500' },
-      'delivered': { text: 'DELIVERED', color: 'bg-green-500' },
-      'cancelled': { text: 'CANCELLED', color: 'bg-red-500' }
-    };
-    
-    const statusInfo = statusMap[status] || { text: status.toUpperCase(), color: 'bg-gray-500' };
-    
-    return {
-      text: statusInfo.text,
-      color: statusInfo.color
-    };
+  const handlePickedUp = () => {
+    updateOrderStatus('On the way');
   };
-
+  
+  const handleDelivered = () => {
+    updateOrderStatus('Delivered');
+    toast.success('Delivery completed!');
+    setTimeout(() => {
+      navigate('/DeliveryDashboard');
+    }, 2000);
+  };
+  
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+      <div className="flex justify-center items-center h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading delivery information...</p>
+        </div>
       </div>
     );
   }
-
+  
   if (error) {
-    return <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">{error}</div>;
+    return (
+      <div className="flex justify-center items-center h-screen bg-gray-50">
+        <div className="text-center p-8 bg-white rounded-lg shadow-md">
+          <h2 className="text-xl font-bold mb-2">Error</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => navigate('/DeliveryDashboard')}
+            className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    );
   }
-
-  if (!delivery) {
-    return <div className="text-gray-600 text-center py-4">No delivery information available</div>;
-  }
-
-  // Determine which status buttons to show based on current status
-  const getStatusButtons = () => {
-    switch (delivery.status) {
-      case 'driver_assigned':
-        return (
-          <button 
-            onClick={() => updateDeliveryStatus('picked_up')}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200"
-          >
-            Picked Up Order
-          </button>
-        );
-      case 'picked_up':
-        return (
-          <button 
-            onClick={() => updateDeliveryStatus('in_transit')}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200"
-          >
-            Start Delivery
-          </button>
-        );
-      case 'in_transit':
-        return (
-          <button 
-            onClick={() => updateDeliveryStatus('delivered')}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200"
-          >
-            Complete Delivery
-          </button>
-        );
-      case 'delivered':
-        return (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative text-center">
-            Delivery completed! Thank you.
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
-  const statusDisplay = getStatusDisplay(delivery.status);
-
+  
+  const positions = [
+    currentPosition, 
+    restaurantPosition, 
+    customerPosition
+  ].filter(Boolean);
+  
   return (
-    <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md overflow-hidden">
-      <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white py-4 px-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold">Delivery #{deliveryId}</h2>
-          <div className={`${statusDisplay.color} px-3 py-1 rounded-full text-white text-sm font-medium`}>
-            {statusDisplay.text}
-          </div>
+    <div className="min-h-screen bg-gray-50">
+      <Toaster position="top-right" />
+      
+      <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-4">
+        <div className="container mx-auto flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Delivery #{orderId}</h1>
+          <button
+            onClick={() => navigate('/DeliveryDashboard')}
+            className="px-4 py-2 bg-white text-orange-500 rounded-md hover:bg-gray-100"
+          >
+            Back to Dashboard
+          </button>
         </div>
       </div>
       
-      <div className="p-6">
-        {/* GPS Status Section */}
-        <div className="mb-6 bg-blue-50 p-4 rounded-lg">
-          <h3 className="text-lg font-semibold text-blue-800 mb-2">GPS Status</h3>
-          {position ? (
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-              <p className="text-gray-700">
-                Your GPS is active: {formatCoordinates(position)}
-              </p>
+      <div className="container mx-auto px-4 py-8 grid md:grid-cols-5 gap-8">
+        <div className="md:col-span-2 space-y-6">
+          {/* Order Details */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-lg font-semibold mb-4">Order Details</h2>
+            {order && (
+              <>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Restaurant:</span>
+                    <span className="font-medium">{order.restaurantName || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Customer:</span>
+                    <span className="font-medium">{order.customer?.name || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Address:</span>
+                    <span className="font-medium">{order.customer?.address || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Status:</span>
+                    <span className="font-medium">{order.orderStatus}</span>
+                  </div>
+                </div>
+                
+                <div className="mt-6 space-y-2">
+                  <h3 className="text-md font-medium">Order Items</h3>
+                  <ul className="divide-y divide-gray-200">
+                    {order.items?.map((item, index) => (
+                      <li key={index} className="py-2">
+                        <div className="flex justify-between">
+                          <span>
+                            {item.quantity} x {item.name} ({item.size})
+                          </span>
+                          <span>${(item.price * item.quantity).toFixed(2)}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex justify-between pt-4 font-bold">
+                    <span>Total:</span>
+                    <span>${order.totalAmount?.toFixed(2) || '0.00'}</span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          
+          {/* Update Status */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-lg font-semibold mb-4">Update Status</h2>
+            <div className="space-y-4">
+              {order?.orderStatus === 'Ready for Pickup' && (
+                <button
+                  onClick={handlePickedUp}
+                  className="w-full py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                >
+                  Mark as Picked Up
+                </button>
+              )}
+              
+              {order?.orderStatus === 'On the way' && (
+                <button
+                  onClick={handleDelivered}
+                  className="w-full py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+                >
+                  Mark as Delivered
+                </button>
+              )}
+              
+              {order?.orderStatus === 'Delivered' && (
+                <div className="text-center py-2 bg-gray-100 rounded-md text-gray-600">
+                  Delivery completed
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-              <p className="text-gray-700">GPS inactive or loading...</p>
-            </div>
-          )}
+          </div>
         </div>
         
-        {/* Locations Grid */}
-        <div className="grid md:grid-cols-2 gap-4 mb-6">
-          {/* Pickup Location */}
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <div className="flex items-center mb-2">
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-2">
-                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
+        {/* Map */}
+        <div className="md:col-span-3">
+          <div className="bg-white rounded-lg shadow-md h-[600px] overflow-hidden">
+            {positions.length > 0 ? (
+              <MapContainer
+                center={currentPosition || [0, 0]}
+                zoom={14}
+                style={{ height: '100%', width: '100%' }}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
+                
+                <MapCenterUpdater positions={positions} />
+                
+                {currentPosition && (
+                  <Marker position={currentPosition} icon={driverIcon}>
+                    <Popup>Your current location</Popup>
+                  </Marker>
+                )}
+                
+                {restaurantPosition && (
+                  <Marker position={restaurantPosition} icon={restaurantIcon}>
+                    <Popup>Restaurant: {order?.restaurantName || 'Restaurant'}</Popup>
+                  </Marker>
+                )}
+                
+                {customerPosition && (
+                  <Marker position={customerPosition} icon={customerIcon}>
+                    <Popup>Customer: {order?.customer?.name || 'Customer'}</Popup>
+                  </Marker>
+                )}
+              </MapContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center">
+                <p className="text-gray-500">Loading map location data...</p>
               </div>
-              <h3 className="text-lg font-medium">Pickup Location</h3>
-            </div>
-            <p className="text-gray-700 ml-10">Restaurant Coordinates:</p>
-            <p className="font-mono text-sm bg-white p-2 rounded border border-gray-200 mt-1">
-              {formatCoordinates(delivery.restaurantLocation?.coordinates)}
-            </p>
+            )}
           </div>
-          
-          {/* Delivery Location */}
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <div className="flex items-center mb-2">
-              <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center mr-2">
-                <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium">Delivery Location</h3>
-            </div>
-            <p className="text-gray-700 ml-10">Customer Coordinates:</p>
-            <p className="font-mono text-sm bg-white p-2 rounded border border-gray-200 mt-1">
-              {formatCoordinates(delivery.customerLocation?.coordinates)}
-            </p>
-          </div>
-        </div>
-        
-        {/* Status Update Section */}
-        <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-semibold mb-4">Update Delivery Status</h3>
-          
-          {/* Progress Indicator */}
-          <div className="mb-6">
-            <div className="flex items-center">
-              <div className={`w-6 h-6 rounded-full ${delivery.status !== 'pending' ? 'bg-green-500' : 'bg-gray-300'} text-white flex items-center justify-center text-xs`}>
-                1
-              </div>
-              <div className={`flex-1 h-1 mx-2 ${delivery.status !== 'pending' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-              <div className={`w-6 h-6 rounded-full ${delivery.status === 'picked_up' || delivery.status === 'in_transit' || delivery.status === 'delivered' ? 'bg-green-500' : 'bg-gray-300'} text-white flex items-center justify-center text-xs`}>
-                2
-              </div>
-              <div className={`flex-1 h-1 mx-2 ${delivery.status === 'in_transit' || delivery.status === 'delivered' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-              <div className={`w-6 h-6 rounded-full ${delivery.status === 'in_transit' || delivery.status === 'delivered' ? 'bg-green-500' : 'bg-gray-300'} text-white flex items-center justify-center text-xs`}>
-                3
-              </div>
-              <div className={`flex-1 h-1 mx-2 ${delivery.status === 'delivered' ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-              <div className={`w-6 h-6 rounded-full ${delivery.status === 'delivered' ? 'bg-green-500' : 'bg-gray-300'} text-white flex items-center justify-center text-xs`}>
-                4
-              </div>
-            </div>
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>Assigned</span>
-              <span>Pickup</span>
-              <span>In Transit</span>
-              <span>Delivered</span>
-            </div>
-          </div>
-          
-          {getStatusButtons()}
         </div>
       </div>
     </div>

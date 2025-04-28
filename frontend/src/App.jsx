@@ -9,11 +9,7 @@ import MyOrders from "./pages/Main/MyOrders";
 import AdminOrderDashboard from "./pages/Admin/Order/AdminOrderDashboard";
 import AdminLayout from "./components/Admin/Order/AdminLayout";
 
-import DeliveryTracker from "./components/Delivery/DeliveryTracker";
-import DriverDeliveryManager from "./components/Delivery/DriverDeliveryManager";
-import DeliveryDashboard from "./components/Admin/delivery/DeliveryDashboard"
 import AdminDashboard from "./pages/Admin/AdminDashboard";
-
 import Profile from "./pages/User/Profile";
 import Root from "./components/Root";
 import Login from "./pages/Main/Login";
@@ -55,8 +51,18 @@ import EditUser from "./pages/Admin/User/EditUser";
 
 
 import RestaurantRegister from "./pages/Main/RestaurantRegister"
-import authService from './services/authService';
 import PaymentDashboard from "./pages/Admin/Payment/PaymentDashboard";
+import DeliveryDashboard from "./pages/Driver/DeliveryDashboard";
+import DriverDeliveryManager from "./components/Delivery/DriverDeliveryManager";
+import MyDeliveries from "./pages/Driver/MyDeliveries";
+import authService from './services/authService';
+import OrderDetailsPage from './pages/Driver/OrderDetailsPage';
+import DriverProfile from './pages/Driver/DriverProfile';
+import DeliveryManagement from './pages/Admin/DeliveryManagement';
+
+import NotFoundPage from './pages/Errors/NotFoundPage';
+import UnauthorizedPage from './pages/Errors/UnauthorizedPage';
+
 
 function App() {
   useEffect(() => {
@@ -68,6 +74,19 @@ function App() {
     <Router>
       <Routes>
 
+
+
+        <Route 
+          path="/DeliveryDashboard" 
+          element={
+            (() => {
+              console.log("Rendering DeliveryDashboard route");
+              const userData = localStorage.getItem('userData');
+              console.log("userData in route:", userData);
+              return <DeliveryDashboard />;
+            })()
+          } 
+        />
         {/* <Route path="/" element={<Root />} /> */}
         <Route path="/" element={<Root />} />
         <Route path="/profile" element={<Profile />} />
@@ -84,7 +103,6 @@ function App() {
         <Route path="/menu" element={<Menu />} />
         <Route path="/resturents" element={<Resturent />} />
         
-        <Route path="/DeliveryDashboard" element={<DeliveryDashboard/>} />
         {/* Protected customer routes */}
         <Route path="/cart" element={
           <ProtectedRoutes requireRole={["customer", "admin"]}>
@@ -165,12 +183,7 @@ function App() {
           element={<ProtectedRoutes requireRole={["admin"]}>
               <UserDashboard />
           </ProtectedRoutes>} 
-        />
-        
-        <Route path="unauthorized" element={<p className="font bold text-3xl mt-20 ml-20">Unauthorized</p>} />
-
-       
-          
+        />  
 
         {/* Admin Pages */}
         <Route path="/admin" 
@@ -248,10 +261,38 @@ function App() {
           </ProtectedRoutes>
         } />
 
+        {/* Driver routes */}
+        <Route 
+          path="/driver/delivery/:driverId/:orderId" 
+          element={
+            <ProtectedRoutes requireRole={["delivery_person"]}>
+              <DriverDeliveryManager />
+            </ProtectedRoutes>
+          } 
+        />
+        <Route path="/driver/my-deliveries" 
+          element={<ProtectedRoutes requireRole={["delivery_person"]}> 
+            <MyDeliveries /> 
+          </ProtectedRoutes>} />
+
+        <Route path="/driver/profile" 
+          element={<ProtectedRoutes requireRole={["delivery_person"]}> 
+            <DriverProfile />
+          </ProtectedRoutes>} />
+
         {/* Order update page */}
-        <Route path="unauthorized" element={<p className="font bold text-3xl mt-20 ml-20">Unauthorized</p>} />
+        <Route path="unauthorized" element={<UnauthorizedPage />} />
+
+        {/* Order Details Page */}
+        <Route path="/order/:orderId" element={<OrderDetailsPage />} />
+
+        {/* Delivery Management Page */}
+        <Route path="/admin/delivery" 
+          element={<ProtectedRoutes requireRole={["admin"]}> 
+            <DeliveryManagement /> 
+          </ProtectedRoutes>} />
       
-      <Route path="*" element={<p className="font bold text-3xl mt-20 ml-20">Page Not Found</p>} /> 
+      <Route path="*" element={<NotFoundPage />} /> 
       </Routes>
     </Router>
   );
