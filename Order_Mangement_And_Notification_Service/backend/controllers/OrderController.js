@@ -135,11 +135,7 @@ exports.createOrder = async (req, res) => {
                             <td>$${order.totalAmount.toFixed(2)}</td>
                         </tr>
                     </table>
-                    
-                    <p>You can track the status of your order through our DigiDine app or website.</p>
-                    
-                    <a href="https://digidine.com/track-order/${order.orderId}" class="button">Track Your Order</a>
-                    
+                                        
                     <p>If you have any questions or need assistance, please don't hesitate to contact us:</p>
                     <p>Email: support@digidine.com | Phone: (123) 456-7890</p>
                 </div>
@@ -172,17 +168,15 @@ exports.createOrder = async (req, res) => {
         const whatsappMessage = `
 🍽️ *DigiDine Order Confirmation* 🍽️
 
-Hello ${order.customer.name}! Your order from *${order.restaurantName}* has been confirmed.
+Hello ${order.customer.name}! Your order from *${order.restaurantName}* has been placed.
 
 *Order #:* ${order.orderId}
-*Estimated Delivery:* 30-45 minutes
+*Your Order Will be on its way soon*
 
 *Your Order:*
 ${itemList}
 
 *Total:* $${order.totalAmount.toFixed(2)}
-
-Track your order here: https://digidine.com/track-order/${order.orderId}
 
 Thank you for choosing DigiDine! 🙏
         `;
