@@ -84,9 +84,6 @@ function App() {
         <Route path="/menu" element={<Menu />} />
         <Route path="/resturents" element={<Resturent />} />
         
-        <Route path="/order/dashboard" element={<AdminDashboard />} />
-        <Route path="/delivery-tracker/:deliveryId" element={<DeliveryTrackerWrapper />} />
-        <Route path="/driver-delivery/:deliveryId" element={<DriverDeliveryWrapper />} />
         <Route path="/DeliveryDashboard" element={<DeliveryDashboard/>} />
         {/* Protected customer routes */}
         <Route path="/cart" element={
