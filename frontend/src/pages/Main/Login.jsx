@@ -69,12 +69,22 @@ const LoginPage = () => {
       // Store user data properly
       if (response && response.user) {
         console.log("Storing user data:", response);
+        
+        // Store the full response in localStorage
         localStorage.setItem('userData', JSON.stringify(response));
+        
+        // Also store phone number separately for easy access
+        if (response.user.phoneNo) {
+          localStorage.setItem('userPhone', response.user.phoneNo);
+          console.log("User phone saved:", response.user.phoneNo);
+        }
         
         console.log("Checking stored data immediately after setting");
         const storedData = localStorage.getItem('userData');
+        const storedPhone = localStorage.getItem('userPhone');
         console.log("Raw stored data:", storedData);
         console.log("Parsed stored data:", JSON.parse(storedData));
+        console.log("Stored phone:", storedPhone);
       }
       
       toast.success('Login successful!');
