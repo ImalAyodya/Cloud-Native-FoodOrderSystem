@@ -1,9 +1,10 @@
 // routes/smsRoutes.js
 const express = require('express');
-const router = express.Router();
-const { sendSMS } = require('../controllers/smsController');
+const { sendSMS, sendWhatsApp } = require('../controllers/smsController');
 
-// POST /send-sms
+const router = express.Router();
+
 router.post('/send-sms', sendSMS);
+router.post('/send-whatsapp', sendWhatsApp);
 
 module.exports = router;
