@@ -1,10 +1,14 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: food-order-ingress
+  name: food-ordering-ingress
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
 spec:
+  ingressClassName: nginx
   rules:
   - host: digidine.local
     http:
@@ -65,3 +69,17 @@ spec:
             name: restaurant-service
             port:
               number: 5003
+      - path: /api/delivery
+        pathType: Prefix
+        backend:
+          service:
+            name: delivery-service
+            port:
+              number: 5002
+      - path: /api/drivers
+        pathType: Prefix
+        backend:
+          service:
+            name: delivery-service
+            port:
+              number: 5002

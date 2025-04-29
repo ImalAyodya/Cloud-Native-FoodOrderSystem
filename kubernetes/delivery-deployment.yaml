@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: delivery-deployment
+  labels:
+    app: delivery
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: delivery
+  template:
+    metadata:
+      labels:
+        app: delivery
+    spec:
+      containers:
+      - name: delivery
+        image: delivery:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5002
+          name: http
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "5002"
+        - name: MONGO_URI
+          valueFrom:
+            secretKeyRef:
+              name: delivery-secrets
+              key: mongo-uri
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: delivery-secrets
+              key: jwt-secret
+        - name: ORDER_SERVICE_URL
+          value: "http://order-service:5001"
+        envFrom:
+        - configMapRef:
+            name: delivery-config
+        resources:
+          limits:
+            cpu: "300m"
+            memory: "256Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        readinessProbe:
+          httpGet:
+            path: /api/delivery/health
+            port: 5002
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /api/delivery/health
+            port: 5002
+          initialDelaySeconds: 30
+          periodSeconds: 30
