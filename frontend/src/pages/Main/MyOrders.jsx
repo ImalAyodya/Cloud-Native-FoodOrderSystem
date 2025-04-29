@@ -1,8 +1,8 @@
-// All import statements remain unchanged
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ToastContainer } from 'react-toastify';
-import { FaBoxOpen, FaSearch } from 'react-icons/fa';
+import { toast, ToastContainer } from 'react-toastify';
+import { FaBoxOpen, FaSearch, FaTrash, FaTimes, FaEdit, FaHistory, FaUtensils, FaShoppingBag } from 'react-icons/fa';
 import Header from '../../components/Main/Header';
 import Footer from '../../components/Main/Footer';
 import OrderCard from '../../components/Order/OrderCard';
@@ -18,13 +18,33 @@ const MyOrders = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [animateCards, setAnimateCards] = useState(false);
   const [localOrders, setLocalOrders] = useState([]);
+  const [errorHandled, setErrorHandled] = useState(false);
 
   useEffect(() => {
-    if (!loading && orders.length > 0) {
+    if (!loading) {
       setAnimateCards(true);
-      setLocalOrders(orders);
+      setLocalOrders(orders || []);
+
+      if (orders && orders.length > 0) {
+        console.log('Orders fetched:', orders);
+      }
+
+      if (error && !errorHandled) {
+        const isNoOrdersError = error && (
+          error.includes('No orders found') || 
+          error.includes('not found') ||
+          error.toLowerCase().includes('empty')
+        );
+        
+        if (!isNoOrdersError) {
+          toast.error(error);
+        }
+        setErrorHandled(true);
+      }
+    } else {
+      setErrorHandled(false);
     }
-  }, [loading, orders]);
+  }, [loading, orders, error, errorHandled]);
 
   const handleFilterChange = (filter) => {
     setSelectedFilter(filter);
@@ -44,16 +64,81 @@ const MyOrders = () => {
           : order
       )
     );
+    toast.success(`Order #${orderId} status updated to ${newStatus}`, {
+      position: "bottom-right",
+      autoClose: 3000
+    });
   };
 
-  // ✅ FIXED FILTER LOGIC HERE:
+  const handleDeleteOrder = (orderId) => {
+    if (window.confirm(`Are you sure you want to delete order #${orderId}?`)) {
+      setLocalOrders(prevOrders => prevOrders.filter(o => o.orderId !== orderId));
+      toast.info(`Order #${orderId} has been removed`, {
+        position: "bottom-right",
+        autoClose: 3000
+      });
+    }
+  };
+
+  const handleViewDetails = (order) => {
+    const formattedOrder = {
+      id: order.orderId || 'N/A',
+      orderId: order.orderId || 'N/A',
+      orderStatus: order.orderStatus || 'Pending',
+      statusTimestamps: order.statusTimestamps || {},
+      items: Array.isArray(order.items) ? order.items.map((item, index) => ({
+        id: item._id || index,
+        name: item.name || 'Unknown Item',
+        price: item.price || 0,
+        quantity: item.quantity || 1,
+        category: item.category || 'N/A',
+        size: item.size || 'N/A'
+      })) : [],
+      total: order.totalAmount || 0,
+      totalAmount: order.totalAmount || 0,
+      deliveryAddress: order.customer?.address || 'No address provided',
+      customer: order.customer || { name: 'N/A', email: 'N/A', phone: 'N/A' },
+      restaurant: order.restaurant || 'N/A',
+      restaurantName: order.restaurantName || 'N/A',
+      paymentMethod: order.paymentMethod || 'N/A',
+      paymentStatus: order.paymentStatus || 'N/A',
+      paymentTransactionId: order.paymentTransactionId || '',
+      placedAt: order.placedAt || null,
+      date: order.placedAt || null,
+      orderNote: order.orderNote || '',
+      promoCode: order.promoCode || '',
+      discount: order.discount || 0,
+      loggedInUserName: order.loggedInUserName || '',
+      cancellation: order.cancellation || null
+    };
+    setSelectedOrder(formattedOrder);
+  };
+
+  const handleCancelOrder = (orderId) => {
+    if (window.confirm(`Are you sure you want to cancel order #${orderId}?`)) {
+      handleOrderStatusChange(orderId, 'cancelled');
+      toast.warning(`Order #${orderId} has been cancelled`, {
+        position: "bottom-right",
+        autoClose: 3000
+      });
+    }
+  };
+
+  const handleEditOrder = (order) => {
+    console.log("Edit order:", order);
+    toast.info(`Editing order #${order.orderId} is not implemented yet`, {
+      position: "bottom-right",
+      autoClose: 3000
+    });
+  };
+
   const filteredOrders = localOrders.filter(order => {
     const status = order.orderStatus?.toLowerCase() || '';
     const matchesFilter = selectedFilter === 'all' || status === selectedFilter;
 
     const matchesSearch = searchQuery === '' ||
-      order.restaurantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.orderId.toLowerCase().includes(searchQuery.toLowerCase());
+      order.restaurantName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.orderId?.toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesFilter && matchesSearch;
   });
@@ -81,64 +166,111 @@ const MyOrders = () => {
     </div>
   );
 
-  const ErrorDisplay = ({ message }) => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-red-50 border border-red-200 rounded-xl p-8 text-center"
-    >
-      <div className="inline-flex justify-center items-center w-16 h-16 bg-red-100 rounded-full mb-4">
-        <FaBoxOpen className="text-red-500 text-2xl" />
-      </div>
-      <h3 className="text-lg font-bold text-red-800 mb-2">Unable to load orders</h3>
-      <p className="text-red-600">{message}</p>
-      <button
-        onClick={() => window.location.reload()}
-        className="mt-4 px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+  const ErrorDisplay = ({ message }) => {
+    const isNoOrdersError = message && (
+      message.includes('No orders found') || 
+      message.includes('not found') ||
+      message.toLowerCase().includes('empty')
+    );
+
+    if (isNoOrdersError) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white border border-gray-100 rounded-xl p-10 text-center shadow-md"
+        >
+          <div className="inline-flex justify-center items-center w-24 h-24 bg-orange-50 rounded-full mb-6">
+            <FaShoppingBag className="text-orange-400 text-4xl" />
+          </div>
+          <h3 className="text-2xl font-bold text-gray-800 mb-3">You haven't placed any orders yet</h3>
+          <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            Looks like you haven't made your first order with us. 
+            Browse our restaurants and discover delicious meals!
+          </p>
+          <Link to="/restaurants">
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all font-medium shadow-lg shadow-orange-200 flex items-center mx-auto"
+            >
+              <FaUtensils className="mr-2" />
+              Explore Restaurants
+            </motion.button>
+          </Link>
+        </motion.div>
+      );
+    }
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-red-50 border border-red-200 rounded-xl p-8 text-center"
       >
-        Try Again
-      </button>
-    </motion.div>
-  );
+        <div className="inline-flex justify-center items-center w-16 h-16 bg-red-100 rounded-full mb-4">
+          <FaBoxOpen className="text-red-500 text-2xl" />
+        </div>
+        <h3 className="text-lg font-bold text-red-800 mb-2">Unable to load orders</h3>
+        <p className="text-red-600">{message}</p>
+        <button
+          onClick={() => {
+            setErrorHandled(false);
+            window.location.reload();
+          }}
+          className="mt-4 px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+        >
+          Try Again
+        </button>
+      </motion.div>
+    );
+  };
 
   return (
     <>
-      <Header isNotHome={true} />
-      <div className="min-h-screen bg-gray-50 pt-12 pb-16">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-8 p-8 text-white relative overflow-hidden"
-          >
-            <div className="absolute right-0 top-0 opacity-10">
-              {/* background SVG */}
-              <svg width="200" height="200" viewBox="0 0 200 200" fill="none">
-                <path d="M190 10L10 190" stroke="white" strokeWidth="20" strokeLinecap="round" />
-                <path d="M140 10L10 140" stroke="white" strokeWidth="20" strokeLinecap="round" />
-                <path d="M80 10L10 80" stroke="white" strokeWidth="20" strokeLinecap="round" />
-                <path d="M190 60L60 190" stroke="white" strokeWidth="20" strokeLinecap="round" />
-                <path d="M190 120L120 190" stroke="white" strokeWidth="20" strokeLinecap="round" />
-              </svg>
-            </div>
-            <div className="relative z-10">
-              <h1 className="text-3xl font-bold mb-2">My Orders</h1>
-              <p className="text-orange-100">Track and manage your food delivery orders</p>
-              <div className="mt-4 max-w-md relative">
+      <Header />
+      <div className="min-h-screen bg-gray-50">
+        <section className="relative h-[300px] bg-orange-500">
+          <div className="absolute inset-0 bg-black/50"></div>
+          <div className="container mx-auto px-4 h-full flex items-center justify-center relative z-10">
+            <div className="text-center">
+              <motion.h1 
+                className="text-4xl md:text-5xl font-bold text-white mb-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                My Orders
+              </motion.h1>
+              <motion.p 
+                className="text-xl text-white/90 max-w-2xl mx-auto"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                Track and manage your food delivery orders
+              </motion.p>
+              
+              <motion.div 
+                className="mt-6 max-w-md mx-auto relative"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+              >
                 <input
                   type="text"
                   placeholder="Search by restaurant or order ID..."
                   value={searchQuery}
                   onChange={handleSearch}
-                  className="w-full pl-10 pr-4 py-2 rounded-lg bg-white bg-opacity-10 backdrop-blur-sm placeholder-orange-50 text-white border border-white border-opacity-30 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 rounded-lg bg-white/20 backdrop-blur-sm placeholder-white/70 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent"
                 />
-                <FaSearch className="absolute left-3 top-3 text-white text-opacity-70" />
-              </div>
+                <FaSearch className="absolute left-3 top-3.5 text-white text-opacity-70" />
+              </motion.div>
             </div>
-          </motion.div>
+          </div>
+        </section>
 
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -155,6 +287,31 @@ const MyOrders = () => {
             <LoadingSkeleton />
           ) : error ? (
             <ErrorDisplay message={error} />
+          ) : !localOrders || localOrders.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white border border-gray-100 rounded-xl p-10 text-center shadow-md"
+            >
+              <div className="inline-flex justify-center items-center w-24 h-24 bg-orange-50 rounded-full mb-6">
+                <FaShoppingBag className="text-orange-400 text-4xl" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-3">You haven't placed any orders yet</h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                Looks like you haven't made your first order with us. 
+                Browse our restaurants and discover delicious meals!
+              </p>
+              <Link to="/restaurants">
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all font-medium shadow-lg shadow-orange-200 flex items-center mx-auto"
+                >
+                  <FaUtensils className="mr-2" />
+                  Explore Restaurants
+                </motion.button>
+              </Link>
+            </motion.div>
           ) : filteredOrders.length > 0 ? (
             <AnimatePresence>
               {animateCards && (
@@ -165,7 +322,7 @@ const MyOrders = () => {
                 >
                   {filteredOrders.map((order, index) => (
                     <motion.div
-                      key={order._id}
+                      key={order._id || index}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1, duration: 0.3 }}
@@ -174,17 +331,17 @@ const MyOrders = () => {
                         order={{
                           id: order.orderId,
                           restaurant: order.restaurantName,
-                          status: order.orderStatus.toLowerCase(),
+                          status: order.orderStatus?.toLowerCase(),
                           date: order.placedAt,
                           total: order.totalAmount,
                           items: order.items,
-                          deliveryAddress: order.customer.address
+                          deliveryAddress: order.customer?.address
                         }}
-                        onViewDetails={() => setSelectedOrder(order)}
-                        onOrderStatusChange={handleOrderStatusChange}
-                        onDelete={(orderId) => {
-                          setLocalOrders(prevOrders => prevOrders.filter(o => o.orderId !== orderId));
-                        }}
+                        onViewDetails={() => handleViewDetails(order)} 
+                        onOrderStatusChange={(id, status) => handleOrderStatusChange(id, status)}
+                        onDelete={(id) => handleDeleteOrder(id)}
+                        onCancel={(id) => handleCancelOrder(id)}
+                        onEdit={() => handleEditOrder(order)}
                       />
                     </motion.div>
                   ))}
@@ -204,6 +361,17 @@ const MyOrders = () => {
               <p className="text-gray-500">
                 {searchQuery ? 'Try a different search term or filter' : 'You have no orders matching the selected filter'}
               </p>
+              {!searchQuery && selectedFilter === 'all' && (
+                <Link to="/menu" className="inline-block mt-4">
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium"
+                  >
+                    Browse Menu
+                  </motion.button>
+                </Link>
+              )}
             </motion.div>
           )}
         </div>
@@ -211,19 +379,20 @@ const MyOrders = () => {
 
       {selectedOrder && (
         <OrderDetails
-          order={{
-            id: selectedOrder.orderId,
-            items: selectedOrder.items,
-            total: selectedOrder.totalAmount,
-            deliveryAddress: selectedOrder.customer.address,
-            orderStatus: selectedOrder.orderStatus,
-            statusTimestamps: selectedOrder.statusTimestamps || {},
-            restaurant: selectedOrder.restaurantName,
-            customer: selectedOrder.customer,
-            paymentMethod: selectedOrder.paymentMethod,
-            orderNote: selectedOrder.orderNote
-          }}
+          order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
+          onStatusChange={(id, status) => {
+            handleOrderStatusChange(id, status);
+            setSelectedOrder(prev => ({...prev, orderStatus: status}));
+          }}
+          onDelete={(id) => {
+            handleDeleteOrder(id);
+            setSelectedOrder(null);
+          }}
+          onCancel={(id) => {
+            handleCancelOrder(id);
+            setSelectedOrder(prev => ({...prev, orderStatus: 'cancelled'}));
+          }}
         />
       )}
 

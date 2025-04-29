@@ -23,7 +23,8 @@ import {
   FaList,
   FaMapMarkerAlt,
   FaExclamationCircle,
-  FaStream
+  FaStream,
+  FaEnvelope
 } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import Swal from 'sweetalert2';
@@ -77,27 +78,15 @@ const AdminSidebar = ({ user }) => {
       subMenu: [
         { name: 'Order Dashboard', path: '/order/dashboard' },
         { name: 'All Orders', path: '/admin/orders' },
-        { name: 'Pending', path: '/admin/orders?status=Pending' },
-        { name: 'Completed', path: '/admin/orders?status=Completed' },
-        { name: 'Cancelled', path: '/admin/orders?status=Cancelled' },
+        
       ]
     },
     { 
       name: 'Restaurants', 
       icon: <FaUtensils size={20} />, 
-      path: '/admin/restaurants',
+      path: '/restaurant/admin/dashboard',
       badge: null,
-      subMenu: [
-        { name: 'All Restaurants', path: '/admin/restaurants' },
-        { name: 'Add Restaurant', path: '/admin/restaurants/add' },
-        { name: 'Categories', path: '/admin/restaurant-categories' },
-      ]
-    },
-    { 
-      name: 'Menu Management', 
-      icon: <FaList size={20} />, 
-      path: '/admin/menu',
-      badge: null
+    
     },
     { 
       name: 'Users', 
@@ -105,33 +94,20 @@ const AdminSidebar = ({ user }) => {
       path: '/admin/users',
       badge: null,
       subMenu: [
-        { name: 'Customers', path: '/admin/users/customers' },
-        { name: 'Restaurant Owners', path: '/admin/users/restaurant-owners' },
-        { name: 'Delivery Personnel', path: '/admin/users/delivery' },
-        { name: 'Administrators', path: '/admin/users/administrators' },
+        { name: 'User Dashboard', path: '/user/dashboard' },
+        { name: 'All Users', path: '/user/management' },
+        
       ]
     },
-    { 
-      name: 'Analytics', 
-      icon: <FaChartPie size={20} />, 
-      path: '/admin/analytics',
-      badge: null,
-      subMenu: [
-        { name: 'Sales Overview', path: '/admin/analytics/sales' },
-        { name: 'Restaurant Performance', path: '/admin/analytics/restaurants' },
-        { name: 'User Activity', path: '/admin/analytics/users' },
-        { name: 'Reports', path: '/admin/analytics/reports' },
-      ]
-    },
+    
     { 
       name: 'Payments', 
       icon: <FaMoneyBillWave size={20} />, 
       path: '/admin/payments',
       badge: null,
       subMenu: [
-        { name: 'Transactions', path: '/admin/payments/transactions' },
-        { name: 'Refunds', path: '/admin/payments/refunds' },
-        { name: 'Payment Methods', path: '/admin/payments/methods' },
+        { name: 'Payment Dashboard', path: '/admin/payments' },
+        
       ]
     },
     {
@@ -140,50 +116,25 @@ const AdminSidebar = ({ user }) => {
       path: '/admin/delivery',
       badge: null,
       subMenu: [
-        { name: 'Delivery Orders', path: '/admin/delivery/orders' },
-        { name: 'Drivers', path: '/admin/delivery/drivers' },
-        { name: 'Tracking', path: '/admin/delivery/tracking' },
+        { name: 'Delivery Orders', path: '/admin/delivery' },
       ]
     },
-    { 
-      name: 'Reviews', 
-      icon: <FaStar size={20} />, 
-      path: '/admin/reviews',
-      badge: null
+    {
+      name: 'Contact',
+      icon: <FaEnvelope size={20} />,
+      path: '/admin/contacts',
+      
+      subMenu: [
+        { name: 'All Messages', path: '/admin/contacts' },
+        
+      ]
     },
-    { 
-      name: 'Locations', 
-      icon: <FaMapMarkerAlt size={20} />, 
-      path: '/admin/locations',
-      badge: null
-    }
   ];
 
   const secondaryMenuItems = [
-    { 
-      name: 'Notifications', 
-      icon: <FaBell size={20} />, 
-      path: '/admin/notifications',
-      badge: unreadNotifications || null,
-      onClick: () => {}
-    },
-    { 
-      name: 'Settings', 
-      icon: <FaCog size={20} />, 
-      path: '/admin/settings',
-      onClick: () => {},
-      subMenu: [
-        { name: 'System Settings', path: '/admin/settings/system' },
-        { name: 'User Preferences', path: '/admin/settings/preferences' },
-        { name: 'Security', path: '/admin/settings/security' },
-      ]
-    },
-    { 
-      name: 'Help & Support', 
-      icon: <FaQuestion size={20} />, 
-      path: '/admin/support',
-      onClick: () => {}
-    },
+    
+    
+    
     { 
       name: 'Logout', 
       icon: <FaSignOutAlt size={20} />, 
@@ -199,9 +150,23 @@ const AdminSidebar = ({ user }) => {
           confirmButtonText: 'Yes, log out'
         }).then((result) => {
           if (result.isConfirmed) {
+            // Clear all authentication data from localStorage
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('role');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('refreshToken');
+            
+            // Clear any other app-specific data that should be removed on logout
+            localStorage.removeItem('adminSettings');
+            localStorage.removeItem('adminPreferences');
+            sessionStorage.clear(); // Clear any session storage data as well
+            
+            // Show success message
             toast.success('Successfully logged out');
-            // Add your logout logic here
-            // Example: navigate('/login');
+            
+            // Navigate to login page
+            navigate('/login');
           }
         });
       }

@@ -95,7 +95,7 @@ const RevenueChart = ({ dailyRevenue }) => {
                 if (context.dataset.label.includes('Revenue')) {
                   label += new Intl.NumberFormat('en-US', { 
                     style: 'currency', 
-                    currency: 'USD',
+                    currency: 'LKR', 
                     minimumFractionDigits: 2
                   }).format(context.raw);
                 } else {
@@ -125,7 +125,7 @@ const RevenueChart = ({ dailyRevenue }) => {
             },
             ticks: {
               callback: function(value) {
-                return '$' + value;
+                return 'LKR ' + value;
               }
             }
           },

@@ -56,7 +56,8 @@ const RecentOrders = ({ orders }) => {
         name: item.name || 'Unknown Item',
         price: item.price || 0,
         quantity: item.quantity || 1,
-        category: item.category || 'N/A'
+        category: item.category || 'N/A',
+        size: item.size || 'N/A' // Include the size field
       })) : [],
       total: order.totalAmount || 0,
       deliveryAddress: order.customer?.address || 'No address provided',
@@ -137,7 +138,7 @@ const RecentOrders = ({ orders }) => {
                     {formatDate(order.placedAt)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    ${order.totalAmount?.toFixed(2) || '0.00'}
+                    LKR {order.totalAmount?.toFixed(2) || '0.00'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(order.orderStatus)}`}>
