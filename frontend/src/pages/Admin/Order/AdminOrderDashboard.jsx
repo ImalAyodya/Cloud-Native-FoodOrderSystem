@@ -179,7 +179,7 @@ const AdminOrderDashboard = () => {
             <div>
               <p className="text-gray-500 text-sm font-medium">Total Revenue</p>
               <h3 className="text-3xl font-bold text-gray-800 mt-1">
-                ${dashboardData.totalRevenue.toFixed(2)}
+                LKR:{dashboardData.totalRevenue.toFixed(2)}
               </h3>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-500">

@@ -247,7 +247,18 @@ const AllOrders = () => {
       paymentMethod: order.paymentMethod || 'N/A',
       paymentStatus: order.paymentStatus || 'N/A',
       placedAt: order.placedAt || null,
-      orderNote: order.orderNote || ''
+      orderNote: order.orderNote || '',
+      // Add formatted cancellation data
+      cancellation: order.cancellation 
+        ? {
+            reason: order.cancellation.reason || 'No reason provided',
+            cancelledBy: order.cancellation.cancelledBy || 'Unknown',
+            additionalInfo: order.cancellation.additionalInfo || '',
+            timestamp: order.cancellation.timestamp || 
+                      (order.statusTimestamps && order.statusTimestamps.Cancelled) || 
+                      null
+          }
+        : null
     };
   
     setSelectedOrder(formattedOrder);
@@ -731,7 +742,7 @@ const handleDeleteOrder = async (orderId) => {
                           {formatDate(order.placedAt)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          ${order.totalAmount?.toFixed(2) || '0.00'}
+                          LKR {order.totalAmount?.toFixed(2) || '0.00'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {order.paymentMethod || 'N/A'}
