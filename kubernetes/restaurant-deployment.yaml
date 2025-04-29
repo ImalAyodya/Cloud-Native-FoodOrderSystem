@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: restaurant
-        image: restaurant-service:latest
+        image: cloud-native-foodordersystem-restaurant-service:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5003
