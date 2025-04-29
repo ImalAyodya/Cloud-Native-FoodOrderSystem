@@ -11,11 +11,35 @@ export const fetchMenuItemsByRestaurant = async (restaurantId) => {
 // Add a new menu item
 export const addMenuItem = async (menuItemData) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/add`, menuItemData);
-    return response.data;
+    const token = localStorage.getItem('token');
+    if (!token) {
+      return { success: false, message: 'Authentication token missing' };
+    }
+
+    console.log('Adding menu item with data:', menuItemData);
+    console.log('Restaurant ID in service:', menuItemData.restaurantId);
+    
+    const response = await axios.post(
+      `${API_BASE_URL}/add`,
+      menuItemData,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+
+    return {
+      success: true,
+      menuItem: response.data
+    };
   } catch (error) {
-    console.error('Error adding menu item:', error.response?.data || error.message);
-    throw error.response?.data || error.message;
+    console.error('Error adding menu item:', error);
+    return {
+      success: false,
+      message: error.response?.data?.message || error.message || 'Failed to add menu item'
+    };
   }
 };
 

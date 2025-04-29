@@ -94,7 +94,8 @@ const MenuItemManagement = () => {
   };
 
   const handleAddItem = () => {
-    navigate(`/restaurant/${id}/add-menu-item`);
+    setIsFormOpen(true);
+    setEditingMenuItem(null);
   };
 
   return (
@@ -103,15 +104,17 @@ const MenuItemManagement = () => {
       <div className="flex-1 flex flex-col min-h-screen">
         <Header isNotHome={true} />
         <main className="flex-1 p-6 bg-gray-100">
-          <h1 className="text-2xl font-bold mb-4">Menu Items</h1>
-          {id && (
-            <button
-              onClick={handleAddItem}
-              className="bg-indigo-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-indigo-700 mb-4"
-            >
-              Add Menu Item
-            </button>
-          )}
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-2xl font-bold">Menu Items</h1>
+            {id && (
+              <button
+                onClick={handleAddItem}
+                className="bg-indigo-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-indigo-700"
+              >
+                Add Menu Item
+              </button>
+            )}
+          </div>
 
           {isFormOpen && (
             <div className="mb-8">
