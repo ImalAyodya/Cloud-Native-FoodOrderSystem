@@ -541,7 +541,7 @@ const RestaurantOrdersPage = () => {
                         {formatDate(order.placedAt)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        ${order.totalAmount?.toFixed(2) || '0.00'}
+                        LKR {order.totalAmount?.toFixed(2) || '0.00'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {order.paymentMethod || 'N/A'}

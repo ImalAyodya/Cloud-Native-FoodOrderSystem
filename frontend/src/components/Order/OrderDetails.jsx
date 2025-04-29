@@ -420,18 +420,30 @@ const OrderDetails = ({ order, onClose }) => {
               </div>
               <div className="space-y-3 text-gray-700">
                 <div>
-                  <span className="font-medium">Cancelled By:</span> {getCancellationByText(cancellation.cancelledBy)}
+                  <span className="font-medium">Cancelled By:</span> {
+                    cancellation && cancellation.cancelledBy 
+                      ? getCancellationByText(cancellation.cancelledBy) 
+                      : 'Unknown'
+                  }
                 </div>
                 <div>
-                  <span className="font-medium">Reason:</span> {cancellation.reason || 'No reason provided'}
+                  <span className="font-medium">Reason:</span> {
+                    cancellation && cancellation.reason 
+                      ? cancellation.reason 
+                      : 'No reason provided'
+                  }
                 </div>
-                {cancellation.additionalInfo && (
+                {cancellation && cancellation.additionalInfo && (
                   <div>
                     <span className="font-medium">Additional Information:</span> {cancellation.additionalInfo}
                   </div>
                 )}
                 <div>
-                  <span className="font-medium">Cancelled On:</span> {formatDate(cancellation.timestamp)}
+                  <span className="font-medium">Cancelled On:</span> {
+                    cancellation && cancellation.timestamp 
+                      ? formatDate(cancellation.timestamp) 
+                      : 'N/A'
+                  }
                 </div>
               </div>
             </motion.div>
@@ -494,7 +506,7 @@ const OrderDetails = ({ order, onClose }) => {
                           </div>
                         </div>
                       </div>
-                      <span className="font-medium">${((item.price || 0) * (item.quantity || 0)).toFixed(2)}</span>
+                      <span className="font-medium">LKR {((item.price || 0) * (item.quantity || 0)).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -606,7 +618,7 @@ const OrderDetails = ({ order, onClose }) => {
               <div className="space-y-3">
                 <div className="flex justify-between text-gray-600">
                   <span>Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>LKR {subtotal.toFixed(2)}</span>
                 </div>
                 
                 {/* Show discount if exists */}
@@ -616,13 +628,13 @@ const OrderDetails = ({ order, onClose }) => {
                       <FaPercentage className="mr-1" size={14} />
                       Discount {order.promoCode && `(${order.promoCode})`}
                     </span>
-                    <span>-${discount.toFixed(2)}</span>
+                    <span>-LKR {discount.toFixed(2)}</span>
                   </div>
                 )}
                 
                 <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-200">
                   <span>Total</span>
-                  <span className="text-orange-500">${Number(totalAmount).toFixed(2)}</span>
+                  <span className="text-orange-500">LKR {Number(totalAmount).toFixed(2)}</span>
                 </div>
               </div>
             </div>

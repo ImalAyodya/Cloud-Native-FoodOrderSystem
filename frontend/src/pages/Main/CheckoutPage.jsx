@@ -62,12 +62,12 @@ const Checkout = () => {
     }
   }, [navigate]);
 
-  const getTotal = () => {
+  const getSubtotal = () => {
     return cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2);
   };
 
-  const getSubtotal = () => {
-    return (parseFloat(getTotal()) - 2.50).toFixed(2); // Assuming $2.50 delivery fee
+  const getTotal = () => {
+    return (parseFloat(getSubtotal()) + 250).toFixed(2); // Adding 250 LKR delivery fee
   };
 
   const handleCustomerInput = (e) => {
@@ -443,7 +443,7 @@ const Checkout = () => {
                                     </div>
                                   </div>
                                   <div className="font-semibold text-gray-800">
-                                    ${(item.price * item.quantity).toFixed(2)}
+                                    LKR {(item.price * item.quantity).toFixed(2)}
                                   </div>
                                 </motion.div>
                               ))}
@@ -741,7 +741,7 @@ const Checkout = () => {
                                   <span className="font-medium text-gray-800 mr-1">{item.quantity}x</span>
                                   <span className="text-sm text-gray-600 truncate max-w-[150px]">{item.name}</span>
                                 </div>
-                                <span className="text-sm font-medium text-gray-800">${(item.price * item.quantity).toFixed(2)}</span>
+                                <span className="text-sm font-medium text-gray-800">LKR {(item.price * item.quantity).toFixed(2)}</span>
                               </div>
                             ))}
                           </div>
@@ -749,15 +749,15 @@ const Checkout = () => {
                           <div className="mt-6 pt-6 border-t border-gray-100">
                             <div className="flex justify-between mb-2">
                               <span className="text-gray-600">Subtotal</span>
-                              <span className="font-medium">${getSubtotal()}</span>
+                              <span className="font-medium">LKR {getSubtotal()}</span>
                             </div>
                             <div className="flex justify-between mb-2">
                               <span className="text-gray-600">Delivery Fee</span>
-                              <span className="font-medium">$2.50</span>
+                              <span className="font-medium">LKR 250</span>
                             </div>
                             <div className="flex justify-between mt-4 pt-4 border-t border-dashed border-gray-200">
                               <span className="text-lg font-semibold text-gray-800">Total</span>
-                              <span className="text-lg font-bold text-orange-500">${getTotal()}</span>
+                              <span className="text-lg font-bold text-orange-500">LKR {getTotal()}</span>
                             </div>
                           </div>
                           

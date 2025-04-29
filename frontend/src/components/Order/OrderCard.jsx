@@ -369,7 +369,7 @@ const OrderCard = ({ order, onViewDetails, onDelete, onReturn, onOrderStatusChan
                 <span>{formatDate(order.date)}</span>
               </div>
               <p className="font-bold text-xl text-gray-800 flex items-baseline">
-                <span className="text-sm text-gray-500 mr-1">$</span>
+                <span className="text-sm text-gray-500 mr-1">LKR </span>
                 {order.total.toFixed(2)}
               </p>
             </div>

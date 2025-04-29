@@ -291,7 +291,7 @@ const Cart = () => {
                                       {item.additionalNotes && ` • ${item.additionalNotes}`}
                                     </p>
                                     <p className="text-orange-500 font-semibold mt-1">
-                                      ${item.price.toFixed(2)}
+                                      LKR {item.price.toFixed(2)}
                                     </p>
                                   </div>
                                 </div>
@@ -323,7 +323,7 @@ const Cart = () => {
                                   
                                   <div className="ml-6 flex items-center">
                                     <span className="font-bold text-gray-800">
-                                      ${(item.price * item.quantity).toFixed(2)}
+                                      LKR {(item.price * item.quantity).toFixed(2)}
                                     </span>
                                     
                                     <motion.button
@@ -406,7 +406,7 @@ const Cart = () => {
                             <span className="font-medium text-gray-800 mr-1">{item.quantity}x</span>
                             <span className="text-sm text-gray-600 truncate max-w-[150px]">{item.name}</span>
                           </div>
-                          <span className="text-sm font-medium text-gray-800">${(item.price * item.quantity).toFixed(2)}</span>
+                          <span className="text-sm font-medium text-gray-800">LKR {(item.price * item.quantity).toFixed(2)}</span>
                         </div>
                       ))}
                       
@@ -420,15 +420,15 @@ const Cart = () => {
                     <div className="mt-6 pt-6 border-t border-gray-100">
                       <div className="flex justify-between mb-2">
                         <span className="text-gray-600">Subtotal</span>
-                        <span className="font-medium">${getSubtotal()}</span>
+                        <span className="font-medium">LKR {getSubtotal()}</span>
                       </div>
                       <div className="flex justify-between mb-2">
                         <span className="text-gray-600">Delivery Fee</span>
-                        <span className="font-medium">${getDeliveryFee()}</span>
+                        <span className="font-medium">LKR {getDeliveryFee()}</span>
                       </div>
                       <div className="flex justify-between mt-4 pt-4 border-t border-dashed border-gray-200">
                         <span className="text-lg font-semibold text-gray-800">Total</span>
-                        <span className="text-lg font-bold text-orange-500">${getTotal()}</span>
+                        <span className="text-lg font-bold text-orange-500">LKR {getTotal()}</span>
                       </div>
                     </div>
                     

@@ -299,7 +299,7 @@ const Menu = () => {
                             onClick={() => handleAddItem(item, variation)}
                             className="flex items-center px-4 py-2 rounded-lg border border-orange-500 hover:bg-orange-500 hover:text-white text-orange-500 transition-colors text-sm font-medium"
                           >
-                            <span>{variation.name} - ${variation.price.toFixed(2)}</span>
+                            <span>{variation.name} - LKR {variation.price.toFixed(2)}</span>
                             <FiPlus className="ml-2" />
                           </button>
                         ))
@@ -308,7 +308,7 @@ const Menu = () => {
                           onClick={() => handleAddItem(item)}
                           className="flex items-center px-4 py-2 rounded-lg border border-orange-500 hover:bg-orange-500 hover:text-white text-orange-500 transition-colors text-sm font-medium"
                         >
-                          <span>${item.price.toFixed(2)}</span>
+                          <span>LKR {item.price.toFixed(2)}</span>
                           <FiPlus className="ml-2" />
                         </button>
                       )}

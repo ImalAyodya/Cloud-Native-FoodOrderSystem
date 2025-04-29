@@ -485,7 +485,7 @@ const StripePaymentForm = ({ amount, orderData, onSuccess, onError }) => {
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-medium text-gray-700">Amount Due</div>
                   <div className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-600 to-amber-500">
-                    ${amount ? amount.toFixed(2) : '0.00'}
+                    LKR {amount ? amount.toFixed(2) : '0.00'}
                   </div>
                 </div>
               </motion.div>
