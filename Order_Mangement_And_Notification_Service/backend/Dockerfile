@@ -1,22 +1,35 @@
 FROM node:18-alpine
 
+# Set working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json files first
+# Copy package files first for better layer caching
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies with strict versioning for production
+RUN npm ci --only=production
 
-# Copy the rest of the application code
-COPY . .
+# Create a non-root user for better security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodeuser -u 1001 -G nodejs
 
-# Expose the port your application runs on
+# Copy application code with correct permissions
+COPY --chown=nodeuser:nodejs . .
+
+# Switch to non-root user
+USER nodeuser
+
+# Expose application port
 EXPOSE 5001
 
-# Set environment variables (these can be overridden at runtime)
+# Environment variables (these should be overridden at runtime, not hardcoded)
 ENV PORT=5001
 ENV NODE_ENV=production
+# Do NOT add sensitive credentials here - pass them at runtime
 
-# Command to run the application
+# Add health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD wget -qO- http://localhost:5001/health || exit 1
+
+# Start the application
 CMD ["node", "server.js"]

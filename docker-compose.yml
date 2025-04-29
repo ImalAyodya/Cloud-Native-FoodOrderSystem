@@ -1,4 +1,4 @@
-version: '3'
+version: '3.8'
 
 services:
   restaurant-service:
@@ -8,12 +8,21 @@ services:
     environment:
       - PORT=5003
       - NODE_ENV=production
-      - MONGODB_URI=mongodb+srv://sithmaka:sithmaka1122@cluster.pvqvoqf.mongodb.net/Order_DB?retryWrites=true&w=majority&appName=Cluster
-      - JWT_SECRET=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
-      - JWT_EXPIRES_IN=7d
+      # Use secrets in production instead of hardcoded values
+      - USER_SERVICE_URL=http://user-management-service:5000
+    env_file:
+      - ./Restaurant_Management_Service/backend/.env
+    volumes:
+      - restaurant-uploads:/app/uploads
     networks:
       - food-order-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5003/api"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
   user-management-service:
     build: ./User_Management_And_Payment_Service/backend
@@ -22,17 +31,19 @@ services:
     environment:
       - PORT=5000
       - NODE_ENV=production
-      - JWT_SECRET=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
-      - JWT_EXPIRES_IN=7d
-      - MONGO_URI=mongodb+srv://Ayodya:Ayodya@cluster0.csn4fag.mongodb.net/FoodOrderDB?retryWrites=true&w=majority&appName=Cluster0
+      - ORDER_NOTIFICATION_SERVICE_URL=http://order-notification-service:5001
+    env_file:
+      - ./User_Management_And_Payment_Service/backend/.env
+    volumes:
+      - user-uploads:/app/uploads
     networks:
       - food-order-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/api/users/health"]
       interval: 30s
-      timeout: 10s
-      retries: 5
+      timeout: 5s
+      retries: 3
       start_period: 15s
 
   order-notification-service:
@@ -42,9 +53,19 @@ services:
     environment:
       - PORT=5001
       - NODE_ENV=production
+      - USER_SERVICE_URL=http://user-management-service:5000
+      - RESTAURANT_SERVICE_URL=http://restaurant-service:5003
+    env_file:
+      - ./Order_Mangement_And_Notification_Service/backend/.env
     networks:
       - food-order-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
   delivery-service:
     build: ./Delivery_Management_Service/Backend
@@ -53,19 +74,32 @@ services:
     environment:
       - PORT=5002
       - NODE_ENV=production
-      - MONGO_URI=mongodb+srv://Ayodya:Ayodya@cluster0.csn4fag.mongodb.net/DeliveryDB?retryWrites=true&w=majority&appName=Cluster0
       - ORDER_SERVICE_URL=http://order-notification-service:5001
       - ORDER_NOTIFICATION_SERVICE_URL=http://order-notification-service:5001
+    env_file:
+      - ./Delivery_Management_Service/Backend/.env
     depends_on:
       - order-notification-service
     networks:
       - food-order-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5002/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
   frontend:
     build: ./frontend
     ports:
     - "5173:80"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:5000
+      - VITE_USER_SERVICE_URL=http://localhost:5000
+      - VITE_RESTAURANT_SERVICE_URL=http://localhost:5003
+      - VITE_ORDER_SERVICE_URL=http://localhost:5001
+      - VITE_DELIVERY_SERVICE_URL=http://localhost:5002
     depends_on:
       - restaurant-service
       - user-management-service
@@ -74,6 +108,16 @@ services:
     networks:
       - food-order-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  restaurant-uploads:
+  user-uploads:
 
 networks:
   food-order-network:
