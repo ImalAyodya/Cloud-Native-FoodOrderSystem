@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: delivery-config
+data:
+  AUTO_ASSIGNMENT_INTERVAL_MS: "60000"
+  DEFAULT_LOCATION_LATITUDE: "6.9271"
+  DEFAULT_LOCATION_LONGITUDE: "79.8612"
+  DRIVER_ASSIGNMENT_TIMEOUT_MS: "300000"
+  MAX_DISTANCE_KM: "20"
+  LOG_LEVEL: "info"
