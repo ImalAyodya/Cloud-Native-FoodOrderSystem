@@ -84,11 +84,9 @@ const AdminSidebar = ({ user }) => {
     { 
       name: 'Restaurants', 
       icon: <FaUtensils size={20} />, 
-      path: '/admin/restaurants',
+      path: '/restaurant/admin/dashboard',
       badge: null,
-      subMenu: [
-        { name: 'All Restaurants', path: '/restaurant/my' },
-      ]
+    
     },
     { 
       name: 'Users', 
