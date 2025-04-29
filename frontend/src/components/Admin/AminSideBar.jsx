@@ -118,7 +118,7 @@ const AdminSidebar = ({ user }) => {
       path: '/admin/delivery',
       badge: null,
       subMenu: [
-        { name: 'Delivery Orders', path: '/admin/delivery/orders' },
+        { name: 'Delivery Orders', path: '/admin/delivery' },
       ]
     },
     {

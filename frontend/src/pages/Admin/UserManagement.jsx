@@ -152,20 +152,34 @@ const UserManagement = () => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
         const token = localStorage.getItem('token');
+        
+        // Check if we have a token
+        if (!token) {
+          toast.error('Authentication token not found. Please login again.');
+          return;
+        }
+        
+        // Make sure we're using the correct endpoint and HTTP method
         const response = await axios.delete(
           `http://localhost:5000/api/admin/users/${userId}`,
           {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { 
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
           }
         );
         
         if (response.data.success) {
           toast.success('User deleted successfully');
-          fetchUsers(); // Refresh the users list
+          // Refresh the users list
+          fetchUsers();
+        } else {
+          toast.error(response.data.message || 'Failed to delete user');
         }
       } catch (error) {
+        console.error('Delete user error:', error);
         toast.error(error.response?.data?.message || 'Failed to delete user');
-        console.error(error);
       }
     }
   };
