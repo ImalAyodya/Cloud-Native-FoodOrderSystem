@@ -1,15 +1,15 @@
 const jwt = require('jsonwebtoken');
+const User = require('../../../User_Management_And_Payment_Service/backend/models/User');
 
 const protect = async (req, res, next) => {
   try {
-    // Get token from header
     let token;
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     }
 
-    // Check if token exists
     if (!token) {
+      console.log('No token provided');
       return res.status(401).json({ 
         success: false, 
         message: 'Not authorized, no token' 
@@ -17,21 +17,20 @@ const protect = async (req, res, next) => {
     }
 
     try {
-      // Verify token without checking role
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
-      // Add user from payload to request object - just store the ID
-      // Don't validate role
+      console.log('Decoded token:', decoded); // Debug log
+
       req.user = {
-        id: decoded.id
+        id: decoded.id,
       };
-      
+      console.log('req.user:', req.user); // Debug log
+
       next();
     } catch (error) {
       console.error('Token verification failed:', error);
       return res.status(401).json({ 
         success: false, 
-        message: 'Not authorized, token failed: ' + error.message
+        message: 'Not authorized, token failed: ' + error.message 
       });
     }
   } catch (error) {

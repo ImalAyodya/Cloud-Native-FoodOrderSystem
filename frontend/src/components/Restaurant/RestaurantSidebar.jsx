@@ -6,7 +6,8 @@ import {
   FaClipboardList, 
   FaChartLine, 
   FaCog, 
-  FaSignOutAlt 
+  FaSignOutAlt,
+  FaChartBar
 } from 'react-icons/fa';
 import { MdRestaurantMenu, MdSettings } from 'react-icons/md';
 
@@ -58,18 +59,12 @@ const RestaurantSidebar = ({ onLogout }) => {
           </NavLink>
           
           <NavLink 
-            to="/restaurant/analytics"
+            to={`/restaurant/${id}/analytics`}
             className={({ isActive }) => isActive ? activeStyle : inactiveStyle}
           >
             <FaChartLine className="mr-3" /> Analytics
           </NavLink>
           
-          <NavLink 
-            to="/restaurant/settings"
-            className={({ isActive }) => isActive ? activeStyle : inactiveStyle}
-          >
-            <FaCog className="mr-3" /> Settings
-          </NavLink>
         </nav>
       </div>
       

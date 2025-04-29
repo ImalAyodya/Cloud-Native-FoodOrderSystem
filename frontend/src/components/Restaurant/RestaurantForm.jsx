@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import imageCompression from 'browser-image-compression';
 
 const RestaurantForm = ({ restaurant, onClose, onSubmit }) => {
   const [formData, setFormData] = useState(
@@ -21,24 +22,97 @@ const RestaurantForm = ({ restaurant, onClose, onSubmit }) => {
     }
   );
 
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
 
+  const compressImage = async (imageFile) => {
+    const options = {
+      maxSizeMB: 1, // Max file size in MB
+      maxWidthOrHeight: 1920, // Max width/height
+      useWebWorker: true
+    };
+
+    try {
+      const compressedFile = await imageCompression(imageFile, options);
+      return compressedFile;
+    } catch (error) {
+      console.error('Error compressing image:', error);
+      throw new Error('Failed to compress image');
+    }
+  };
+
+  const handleImageUpload = async (e, field) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file');
+      return;
+    }
+
+    try {
+      // Show loading state
+      setIsLoading(true);
+
+      // Compress image
+      const compressedImage = await compressImage(file);
+
+      // Convert to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(compressedImage);
+      reader.onloadend = () => {
+        setFormData(prev => ({
+          ...prev,
+          images: {
+            ...prev.images,
+            [field]: reader.result
+          }
+        }));
+        setIsLoading(false);
+      };
+    } catch (error) {
+      setIsLoading(false);
+      alert('Error processing image: ' + error.message);
+    }
+  };
+
   const handleSubmit = async () => {
     try {
+      setIsLoading(true);
+
+      // Validate image sizes
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (formData.images.logo && formData.images.logo.length > maxSize) {
+        throw new Error('Logo image size is too large (max 5MB)');
+      }
+      if (formData.images.banner && formData.images.banner.length > maxSize) {
+        throw new Error('Banner image size is too large (max 5MB)');
+      }
+
       const url = restaurant
         ? `http://localhost:5003/api/restaurant/update/${restaurant._id}`
         : 'http://localhost:5003/api/restaurant/add';
       const method = restaurant ? 'put' : 'post';
 
-      await axios[method](url, formData);
+      const response = await axios[method](url, formData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'maxContentLength': Infinity,
+          'maxBodyLength': Infinity
+        }
+      });
 
-      alert(restaurant ? 'Restaurant updated' : 'Restaurant added');
+      setIsLoading(false);
+      alert(restaurant ? 'Restaurant updated successfully' : 'Restaurant added successfully');
       onSubmit();
     } catch (error) {
-      alert('Error: ' + (error.response?.data?.message || 'Server error'));
+      setIsLoading(false);
+      alert('Error: ' + (error.response?.data?.message || error.message || 'Server error'));
     }
   };
 
@@ -170,6 +244,40 @@ const RestaurantForm = ({ restaurant, onClose, onSubmit }) => {
               }
               style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
             />
+          </div>
+          <div>
+            <label htmlFor="logo">Logo</label>
+            <input
+              type="file"
+              id="logo"
+              accept="image/*"
+              onChange={(e) => handleImageUpload(e, 'logo')}
+              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+            />
+            {formData.images.logo && (
+              <img
+                src={formData.images.logo}
+                alt="Logo preview"
+                style={{ width: '100px', height: '100px', objectFit: 'cover', marginTop: '10px' }}
+              />
+            )}
+          </div>
+          <div>
+            <label htmlFor="banner">Banner</label>
+            <input
+              type="file"
+              id="banner"
+              accept="image/*"
+              onChange={(e) => handleImageUpload(e, 'banner')}
+              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+            />
+            {formData.images.banner && (
+              <img
+                src={formData.images.banner}
+                alt="Banner preview"
+                style={{ width: '200px', height: '100px', objectFit: 'cover', marginTop: '10px' }}
+              />
+            )}
           </div>
         </div>
         <div style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>

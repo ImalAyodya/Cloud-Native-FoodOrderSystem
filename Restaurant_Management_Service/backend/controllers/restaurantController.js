@@ -1,15 +1,32 @@
 const Restaurant = require('../models/Restaurant');
 const mongoose = require('mongoose'); // Added mongoose for ObjectId validation
+const path = require('path');
+const MenuItem = require('../models/MenuItem');
+const Order = require('../../../Order_Mangement_And_Notification_Service/backend/models/Order');
 
 // Create new restaurant
 const addRestaurant = async (req, res) => {
   try {
-    // Remove dependency on req.user.id
-    const newRestaurant = new Restaurant({
-      ...req.body
-      // ownerId should now be provided in the request body
-    });
-    
+    let restaurantData = req.body;
+
+    // Handle file uploads if present
+    if (req.files) {
+      const imageUrls = {};
+      
+      if (req.files.logo) {
+        imageUrls.logo = `/uploads/${req.files.logo[0].filename}`;
+      }
+      if (req.files.banner) {
+        imageUrls.banner = `/uploads/${req.files.banner[0].filename}`;
+      }
+      
+      restaurantData = {
+        ...restaurantData,
+        images: imageUrls
+      };
+    }
+
+    const newRestaurant = new Restaurant(restaurantData);
     const restaurant = await newRestaurant.save();
     res.status(201).json({ success: true, restaurant });
   } catch (error) {
@@ -41,6 +58,9 @@ const getRestaurants = async (req, res) => {
 // Get restaurant by ID
 const getRestaurantById = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid restaurant ID' });
+    }
     const restaurant = await Restaurant.findById(req.params.id)
       .populate('menuItems');
       
@@ -52,24 +72,44 @@ const getRestaurantById = async (req, res) => {
   }
 };
 
-// Update restaurant
 const updateRestaurant = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid restaurant ID' });
+    }
+
     const restaurant = await Restaurant.findById(req.params.id);
-    
-    if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found' });
-    if (restaurant.ownerId.toString() !== req.user.id && req.user.role !== 'admin') 
-      return res.status(403).json({ success: false, message: 'Not authorized' });
-    
+    if (!restaurant) {
+      return res.status(404).json({ success: false, message: 'Restaurant not found' });
+    }
+
+    let updateData = { ...req.body };
+    delete updateData.ownerId;
+
+    // Handle file uploads if present
+    if (req.files) {
+      const imageUrls = { ...restaurant.images }; // Keep existing images
+      
+      if (req.files.logo) {
+        imageUrls.logo = `/uploads/${req.files.logo[0].filename}`;
+      }
+      if (req.files.banner) {
+        imageUrls.banner = `/uploads/${req.files.banner[0].filename}`;
+      }
+      
+      updateData.images = imageUrls;
+    }
+
     const updatedRestaurant = await Restaurant.findByIdAndUpdate(
-      req.params.id, 
-      { $set: req.body }, 
-      { new: true }
+      req.params.id,
+      { $set: updateData },
+      { new: true, runValidators: true }
     );
-    
+
     res.status(200).json({ success: true, restaurant: updatedRestaurant });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error updating restaurant:', error);
+    res.status(500).json({ success: false, message: 'Internal Server Error', error: error.message });
   }
 };
 
@@ -109,16 +149,22 @@ const getAvailability = async (req, res) => {
 // Delete restaurant
 const deleteRestaurant = async (req, res) => {
   try {
-    const restaurant = await Restaurant.findById(req.params.id);
-    
-    if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found' });
-    if (restaurant.ownerId.toString() !== req.user.id && req.user.role !== 'admin') 
-      return res.status(403).json({ success: false, message: 'Not authorized' });
-      
-    await Restaurant.findByIdAndDelete(req.params.id);
+    // Validate restaurant ID
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid restaurant ID' });
+    }
+
+    // Use raw MongoDB operation to delete
+    const result = await Restaurant.collection.deleteOne({ _id: new mongoose.Types.ObjectId(req.params.id) });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Restaurant not found' });
+    }
+
     res.status(200).json({ success: true, message: 'Restaurant deleted' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error deleting restaurant:', error.message, error.stack);
+    res.status(500).json({ success: false, message: 'Internal Server Error', error: error.message });
   }
 };
 
@@ -183,6 +229,61 @@ const getRestaurantsByUserId = async (req, res) => {
   }
 };
 
+const getRestaurantAnalytics = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validate the restaurant ID
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid restaurant ID' });
+    }
+
+    // Check if the restaurant exists
+    const restaurant = await Restaurant.findById(id);
+    if (!restaurant) {
+      return res.status(404).json({ success: false, message: 'Restaurant not found' });
+    }
+
+    // Fetch menu items for the restaurant
+    const menuItems = await MenuItem.find({ id }).select('name category cuisine price');
+
+    // Hardcoded analytics data
+    const analytics = {
+      totalMenuItems: menuItems.length,
+      totalOrders: Order.length, // Hardcoded
+      totalRevenue: 5000, // Hardcoded
+      revenueData: [
+        { date: '2025-04-01', revenue: 1000 },
+        { date: '2025-04-02', revenue: 1200 },
+        { date: '2025-04-03', revenue: 1500 },
+      ], // Hardcoded
+      menuItemsByCategory: menuItems.reduce((acc, item) => {
+        const existingCategory = acc.find((entry) => entry.name === item.category);
+        if (existingCategory) {
+          existingCategory.value += 1;
+        } else {
+          acc.push({ name: item.category, value: 1 });
+        }
+        return acc;
+      }, []),
+      popularDishes: [
+        { name: 'Pizza', orders: 50 },
+        { name: 'Burger', orders: 40 },
+        { name: 'Pasta', orders: 30 },
+      ], // Hardcoded
+    };
+
+    // Return the analytics data
+    res.status(200).json(analytics);
+  } catch (error) {
+    console.error('Error fetching restaurant analytics:', error.message, error.stack);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching analytics data',
+    });
+  }
+};
+
 module.exports = {
   addRestaurant,
   getRestaurants,
@@ -192,5 +293,6 @@ module.exports = {
   getAvailability,
   deleteRestaurant,
   getNearbyRestaurants,
-  getRestaurantsByUserId
+  getRestaurantsByUserId,
+  getRestaurantAnalytics
 };

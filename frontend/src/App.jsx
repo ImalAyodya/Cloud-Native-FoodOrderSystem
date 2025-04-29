@@ -28,10 +28,12 @@ import Checkout from "./pages/Main/CheckoutPage";
 import Resturent from "./pages/Main/Resturent";
 import LoginPage from "./pages/Main/Login";
 import RestaurantManagementDashboard from "./pages/Restaurant/RestaurantManagementDashboard";
-import RestaurantList from "./pages/Restaurant/RestaurantList";
+// import RestaurantList from "./pages/Restaurant/RestaurantList";
 import MenuItemManagement from "./pages/Restaurant/MenuItemManagement";
 import MyRestaurants from "./pages/Restaurant/MyRestaurants";
 import AddRestaurant from "./pages/Restaurant/AddRestaurant";
+import AddMenuItem from './pages/Restaurant/AddMenuItem';
+import RestaurantProfile from "./pages/Restaurant/RestaurantProfile";
 
 import PaymentSuccessPage from './pages/Main/PaymentSuccessPage';
 import PaymentCancelPage from './pages/Main/PaymentSuccessPage';
@@ -63,6 +65,7 @@ import DeliveryManagement from './pages/Admin/DeliveryManagement';
 import NotFoundPage from './pages/Errors/NotFoundPage';
 import UnauthorizedPage from './pages/Errors/UnauthorizedPage';
 
+import RestaurantAnalyticsDashboard from "./pages/Restaurant/RestaurantAnalyticsDashboard";
 
 function App() {
   useEffect(() => {
@@ -212,6 +215,17 @@ function App() {
           element={<ProtectedRoutes requireRole={["admin"]}>
             <RestaurantManagementDashboard />
         </ProtectedRoutes>} />
+        <Route path="/restaurant/dashboard" element={<RestaurantManagementDashboard />} />
+        {/* <Route path="/restaurant/list" element={<RestaurantList />} /> */}
+        <Route path="/restaurant/:restaurantId/menu" element={<MenuItemManagement />} />
+        <Route path="/restaurant/my-restaurants" element={<MyRestaurants />} />
+        <Route path="/restaurant/add" element={<AddRestaurant />} />
+        <Route path="/restaurant/dashboard/:id" element={<RestaurantManagementDashboard />} />
+        <Route path="/add-menu-item" element={<AddMenuItem />} />
+        <Route path="/restaurant/:restaurantId/add-menu-item" element={<AddMenuItem />} />
+        <Route path="/restaurant/profile/:id" element={<RestaurantProfile />} />
+        {/* Restaurant Analytics Dashboard */}
+        <Route path="/restaurant/:id/analytics" element={<RestaurantAnalyticsDashboard />} />
 
         <Route path="/restaurant/list" 
           element={<ProtectedRoutes requireRole={["admin"]}>
@@ -293,6 +307,8 @@ function App() {
           </ProtectedRoutes>} />
       
       <Route path="*" element={<NotFoundPage />} /> 
+        <Route path="unauthorized" element={<p className="font bold text-3xl mt-20 ml-20">Unauthorized</p>} />
+
       </Routes>
     </Router>
   );

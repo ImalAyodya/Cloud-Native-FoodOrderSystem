@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { FaUtensils, FaStore, FaClipboardList, FaChartLine } from 'react-icons/fa';
+import { FaUtensils, FaStore, FaClipboardList, FaChartLine, FaChartBar } from 'react-icons/fa';
 import { MdRestaurantMenu, MdReviews } from 'react-icons/md';
 import { motion } from 'framer-motion';
 import axios from 'axios';
@@ -193,7 +193,7 @@ const RestaurantManagementDashboardContent = () => {
         >
           <h3 className="text-lg font-bold text-gray-800 mb-4">Manage Your Restaurant</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link to={`/restaurant/list`} className="bg-white border border-gray-200 rounded-xl p-4 flex items-center hover:shadow-md transition-shadow">
+            <Link to={`/restaurant/profile/${id}`} className="bg-white border border-gray-200 rounded-xl p-4 flex items-center hover:shadow-md transition-shadow">
               <div className="w-12 h-12 rounded-lg bg-orange-100 flex items-center justify-center text-orange-500 mr-4">
                 <FaStore />
               </div>
@@ -282,6 +282,28 @@ const RestaurantManagementDashboardContent = () => {
                 <p className="text-sm text-gray-500">Reviews will appear here as customers rate your restaurant</p>
               </div>
             </div>
+          </div>
+
+          {/* Analytics Card */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <FaChartBar className="text-2xl text-blue-600" />
+              </div>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+              Restaurant Analytics
+            </h3>
+            <p className="text-gray-600 mb-4">
+              View detailed analytics and insights about your restaurant's performance.
+            </p>
+            <Link
+              to={`/restaurant/${restaurantData.id}/analytics`} // Dynamic route
+              className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              <FaChartBar className="mr-2" />
+              View Analytics
+            </Link>
           </div>
         </motion.div>
       </div>
