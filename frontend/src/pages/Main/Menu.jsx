@@ -60,13 +60,16 @@ const Menu = () => {
     const fetchMenuItems = async () => {
       setLoading(true);
       try {
-        // Build query parameters
+        // Build query parameters - only filter by restaurantId if one is provided
         const params = { isAvailable: 'true' };
         if (restaurantId) {
           params.restaurantId = restaurantId;
         }
 
+        console.log("Fetching menu items with params:", params);
         const response = await axios.get('http://localhost:5003/api/menu/get', { params });
+        
+        console.log("API response:", response.data);
         
         if (response.data.success && response.data.menuItems) {
           setMenuItems(response.data.menuItems);

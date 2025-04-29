@@ -138,7 +138,7 @@ const Cart = () => {
   const getSubtotal = () =>
     cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2);
   
-  const getDeliveryFee = () => (cartItems.length > 0 ? 2.50 : 0).toFixed(2);
+  const getDeliveryFee = () => (cartItems.length > 0 ? 250 : 0).toFixed(2);
   
   const getTotal = () => 
     (parseFloat(getSubtotal()) + parseFloat(getDeliveryFee())).toFixed(2);

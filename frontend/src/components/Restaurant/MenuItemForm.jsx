@@ -1,5 +1,5 @@
 // MenuItemForm.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { addMenuItem, updateMenuItem } from '../../services/menuItemService';
 import { toast } from 'react-toastify'; // Ensure toast is imported for notifications
 import axios from 'axios'; // Import axios for direct API calls
@@ -36,6 +36,32 @@ const MenuItemForm = ({ menuItem, restaurantId, onClose, onSubmit }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState(formData.image || ''); // For previewing the image
   const [isUploading, setIsUploading] = useState(false); // Track upload progress
+
+  useEffect(() => {
+    console.log("MenuItemForm received restaurantId prop:", restaurantId);
+    
+    // If the restaurantId prop is available, ensure it's set in formData
+    if (restaurantId) {
+      console.log("Setting restaurantId in formData:", restaurantId);
+      setFormData(prev => ({
+        ...prev,
+        restaurantId: restaurantId
+      }));
+    } else {
+      console.error("No restaurantId prop received in MenuItemForm!");
+    }
+  }, []);
+
+  useEffect(() => {
+    // Make sure restaurantId is always set in formData
+    if (restaurantId && (!formData.restaurantId || formData.restaurantId !== restaurantId)) {
+      console.log('Setting restaurant ID in form data:', restaurantId);
+      setFormData(prevData => ({
+        ...prevData,
+        restaurantId: restaurantId
+      }));
+    }
+  }, [restaurantId, formData.restaurantId]);
 
   const categories = [
     'Appetizers/Starters',
@@ -113,20 +139,37 @@ const MenuItemForm = ({ menuItem, restaurantId, onClose, onSubmit }) => {
     formDataUpload.append('image', file);
 
     try {
-      const response = await axios.post('http://localhost:5003/api/menu/upload-image', formDataUpload, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          // 'Authorization': 'Bearer your-mock-jwt-token-here', // Replace with your actual token
-        },
-      });
+      // Get token for authentication
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Authentication token missing. Please login again.');
+        setIsUploading(false);
+        return;
+      }
+      
+      console.log('Uploading image with auth token');
+      const response = await axios.post(
+        'http://localhost:5003/api/menu/upload-image', 
+        formDataUpload, 
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${token}` // Include auth token here
+          }
+        }
+      );
 
       const imageUrl = response.data.imageUrl;
-      setFormData({ ...formData, image: imageUrl });
+      // Important: preserve restaurantId when updating formData
+      setFormData(prev => ({
+        ...prev,
+        image: imageUrl,
+        restaurantId: restaurantId // Ensure restaurantId is always set
+      }));
       toast.success('Image uploaded successfully!');
     } catch (error) {
       console.error('Error uploading image:', error);
-      toast.error('Failed to upload image: ' + 
-        (error.response?.data?.message || error.message));
+      toast.error(`Failed to upload image: ${error.response?.data?.message || error.message}`);
       setImagePreview(''); // Reset preview on failure
     } finally {
       setIsUploading(false);
@@ -144,6 +187,30 @@ const MenuItemForm = ({ menuItem, restaurantId, onClose, onSubmit }) => {
     setIsSubmitting(true);
 
     try {
+      // Debug output
+      console.log('Form data being submitted:', formData);
+      console.log('Restaurant ID in form:', formData.restaurantId);
+      console.log('Restaurant ID from props:', restaurantId);
+      
+      // Validate restaurant ID
+      if (!formData.restaurantId) {
+        console.error('Missing restaurant ID');
+        // Try to use the prop directly if form state doesn't have it
+        if (restaurantId) {
+          console.log('Using restaurantId from props instead');
+          setFormData(prev => ({
+            ...prev,
+            restaurantId: restaurantId
+          }));
+        } else {
+          toast.error('Restaurant ID is missing. Cannot create menu item.');
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      console.log('Submitting with restaurant ID:', formData.restaurantId);
+      
       // Format variations to ensure price is a number
       const formattedVariations = formData.variations.map(variation => ({
         name: variation.name,
@@ -152,9 +219,9 @@ const MenuItemForm = ({ menuItem, restaurantId, onClose, onSubmit }) => {
 
       const finalData = {
         ...formData,
-        price: parseFloat(formData.price), // Ensure price is a number
+        price: parseFloat(formData.price),
         image: formData.image,
-        variations: formattedVariations // Add the formatted variations
+        variations: formattedVariations
       };
 
       let result;

@@ -418,15 +418,7 @@ const OrderCard = ({ order, onViewDetails, onDelete, onReturn, onOrderStatusChan
               {/* Return and Complete buttons for delivered orders */}
               {order.status.toLowerCase() === 'delivered' && (
                 <>
-                  <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={onReturn}
-                    className="bg-gradient-to-r from-gray-500 to-gray-600 text-white px-4 py-2 rounded-xl hover:shadow-md transition-all duration-300 font-medium text-sm flex items-center gap-2"
-                  >
-                    <FaUndo size={12} />
-                    <span>Return</span>
-                  </motion.button>
+                  
                   <motion.button
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}

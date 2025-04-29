@@ -141,11 +141,8 @@ function App() {
           </ProtectedRoutes>
         } />
 
-        {/* Order Update Page */}
-        <Route path="/orders/update/:orderId" 
-          element={<ProtectedRoutes requireRole={["admin"]}>
-            <OrderUpdatePage />
-        </ProtectedRoutes>} />
+        {/* Order Update Page - No longer protected */}
+        <Route path="/orders/update/:orderId" element={<OrderUpdatePage />} />
 
         {/* User Management Protected Routes */}
         <Route path="/user/management" element={

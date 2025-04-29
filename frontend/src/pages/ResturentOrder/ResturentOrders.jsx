@@ -86,8 +86,29 @@ const RestaurantOrdersPage = () => {
       }
     } catch (err) {
       console.error('Error fetching restaurant orders:', err);
-      setError(err.message || 'Failed to fetch orders');
-      toast.error(`Error loading orders: ${err.message}`);
+      
+      // More user-friendly error messages based on the type of error
+      if (err.message === 'Network Error') {
+        setError('Unable to connect to order service. Please check your internet connection and try again.');
+      } else if (err.response) {
+        if (err.response.status === 404) {
+          // Not an error - just means no orders yet
+          setError('no_orders_yet');
+        } else if (err.response.status === 401) {
+          setError('Your session has expired. Please log in again to view orders.');
+        } else if (err.response.status === 403) {
+          setError('You don\'t have permission to view orders for this restaurant.');
+        } else {
+          setError(`Couldn't load your orders (Error ${err.response.status})`);
+        }
+      } else {
+        setError('Unable to load your restaurant orders. Please try again later.');
+      }
+      
+      // Don't show toast for "no orders yet" - it's not an error
+      if (!(err.response && err.response.status === 404)) {
+        toast.error(`Problem loading orders: ${err.response?.status === 404 ? 'No orders found' : 'Connection issue'}`);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -336,13 +357,13 @@ const RestaurantOrdersPage = () => {
     }
     
     if (error) {
-      // Check if the error is a 404 error (no orders found)
-      const is404Error = error.includes('404') || error.includes('not found');
+      // Special case for "no orders yet" - this is not a true error
+      const isNoOrdersYet = error === 'no_orders_yet';
       
       return (
-        <div className={`${is404Error ? 'bg-orange-50' : 'bg-red-50'} p-8 rounded-xl text-center max-w-3xl mx-auto`}>
+        <div className={`${isNoOrdersYet ? 'bg-orange-50' : 'bg-red-50'} p-8 rounded-xl text-center max-w-3xl mx-auto`}>
           <div className="mb-6">
-            {is404Error ? (
+            {isNoOrdersYet ? (
               <img 
                 src="/images/empty-orders.svg" 
                 alt="No Orders Yet" 
@@ -357,7 +378,7 @@ const RestaurantOrdersPage = () => {
             )}
           </div>
           
-          {is404Error ? (
+          {isNoOrdersYet ? (
             <>
               <h3 className="text-orange-800 font-bold text-2xl mb-3">Your Order Dashboard Is Ready!</h3>
               <p className="text-orange-700 mb-4 max-w-md mx-auto">
@@ -386,8 +407,12 @@ const RestaurantOrdersPage = () => {
             </>
           ) : (
             <>
-              <h3 className="text-red-800 font-bold text-xl mb-2">Unable to Load Orders</h3>
-              <p className="text-red-600 mb-6">{error}</p>
+              <h3 className="text-red-800 font-bold text-xl mb-2">Cannot Connect to Order Service</h3>
+              <p className="text-red-600 mb-6">
+                {error.includes('internet') ? 
+                  'Please check your internet connection and try again.' : 
+                  'The order service is temporarily unavailable. Please try again later.'}
+              </p>
               <div className="flex justify-center space-x-4">
                 <button 
                   onClick={fetchOrders}
@@ -396,10 +421,10 @@ const RestaurantOrdersPage = () => {
                   <FaSync className="mr-2" /> Try Again
                 </button>
                 <button 
-                  onClick={() => window.location.href = "/restaurants/my-restaurants"}
+                  onClick={() => window.location.href = "/restaurant/dashboard"}
                   className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
                 >
-                  Back to Restaurant Dashboard
+                  Back to Dashboard
                 </button>
               </div>
             </>
