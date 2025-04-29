@@ -103,7 +103,6 @@ function App() {
         <Route path="/menu" element={<Menu />} />
         <Route path="/resturents" element={<Resturent />} />
         
-
         {/* Protected customer routes */}
         <Route path="/cart" element={
           <ProtectedRoutes requireRole={["customer", "admin"]}>

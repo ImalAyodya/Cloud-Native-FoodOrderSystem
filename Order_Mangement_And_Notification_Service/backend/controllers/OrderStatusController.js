@@ -1,5 +1,6 @@
 const Order = require('../models/Order');
 const nodemailer = require('nodemailer');
+const twilio = require('twilio');
 
 // Update order status
 exports.updateOrderStatus = async (req, res) => {
@@ -49,12 +50,8 @@ exports.updateOrderStatus = async (req, res) => {
             });
         }
 
-        // Find and update the order
-        const order = await Order.findOneAndUpdate(
-            { orderId }, // Or use { _id: orderId } if using Mongo's ObjectId
-            { orderStatus: newStatus },
-            { new: true }
-        );
+        // Find the order
+        const order = await Order.findOne({ orderId });
 
         if (!order) {
             return res.status(404).json({
@@ -63,37 +60,169 @@ exports.updateOrderStatus = async (req, res) => {
             });
         }
 
-        // Save the updated order
+        // Update the order status
+        const oldStatus = order.orderStatus;
+        order.orderStatus = newStatus;
+
+        // Add timestamp for this status
+        if (!order.statusTimestamps) {
+            order.statusTimestamps = new Map();
+        }
+        order.statusTimestamps.set(newStatus, new Date());
+
         await order.save();
 
-        // Emit the status change to all clients tracking this order
+        // Send WhatsApp notifications when status changes to "On the way"
+        if (newStatus === 'On the way') {
+            // Initialize Twilio client
+            const accountSid = process.env.TWILIO_ACCOUNT_SID;
+            const authToken = process.env.TWILIO_AUTH_TOKEN;
+            const client = twilio(accountSid, authToken);
+            const whatsappNumber = process.env.TWILIO_WHATSAPP_PHONE_NUMBER;
+
+            // 1. Notify customer that driver is on the way
+            if (order.customer.phone) {
+                try {
+                    const customerPhone = formatPhoneForWhatsApp(order.customer.phone);
+
+                    const estimatedTime = 30; // Example: 30 minutes estimated delivery time
+                    const currentTime = new Date();
+                    const estimatedDeliveryTime = new Date(currentTime.getTime() + estimatedTime * 60000);
+                    const formattedDeliveryTime = `${estimatedDeliveryTime.getHours()}:${String(estimatedDeliveryTime.getMinutes()).padStart(2, '0')}`;
+
+                    const customerMessage = `
+🚚 *Your order is on the way!* 🚚
+
+Your order #${order.orderId} from *${order.restaurantName}* is now on the way to your location.
+
+*Estimated delivery time:* ${formattedDeliveryTime} (approx. ${estimatedTime} mins)
+
+Your driver ${order.driverInfo?.name || 'is'} on the way with your food. You can track your delivery in real-time through our DigiDine app.
+
+Thank you for choosing DigiDine! 🙏
+                    `;
+
+                    await client.messages.create({
+                        body: customerMessage,
+                        from: `whatsapp:${whatsappNumber}`,
+                        to: `whatsapp:${customerPhone}`
+                    });
+
+                    console.log(`Customer on-the-way WhatsApp sent to ${customerPhone}`);
+                } catch (error) {
+                    console.error('Error sending on-the-way WhatsApp to customer:', error);
+                }
+            }
+
+            // 2. Send delivery instructions to the driver
+            if (order.driverInfo && order.driverInfo.phone) {
+                try {
+                    const driverPhone = formatPhoneForWhatsApp(order.driverInfo.phone);
+
+                    const driverMessage = `
+📍 *Delivery Instructions for Order #${order.orderId}* 📍
+
+You're on your way with the order from ${order.restaurantName}!
+
+*Delivery Address:*
+${order.customer.address}
+
+*Customer:*
+${order.customer.name}
+${order.customer.phone}
+
+Remember to:
+• Verify the order contents before leaving the restaurant
+• Follow the in-app navigation to reach the customer
+• Update your status to "Delivered" once completed
+
+Safe travels! 🛵
+                    `;
+
+                    await client.messages.create({
+                        body: driverMessage,
+                        from: `whatsapp:${whatsappNumber}`,
+                        to: `whatsapp:${driverPhone}`
+                    });
+
+                    console.log(`Driver delivery instructions WhatsApp sent to ${driverPhone}`);
+                } catch (error) {
+                    console.error('Error sending delivery instructions WhatsApp to driver:', error);
+                }
+            }
+        }
+
+        // Send WhatsApp notifications when status changes to "Delivered"
+        if (newStatus === 'Delivered') {
+            // Initialize Twilio client
+            const accountSid = process.env.TWILIO_ACCOUNT_SID;
+            const authToken = process.env.TWILIO_AUTH_TOKEN;
+            const client = twilio(accountSid, authToken);
+            const whatsappNumber = process.env.TWILIO_WHATSAPP_PHONE_NUMBER;
+            
+            // Notify customer that order is delivered
+            if (order.customer.phone) {
+                try {
+                    const customerPhone = formatPhoneForWhatsApp(order.customer.phone);
+                    
+                    const customerMessage = `
+🎉 *Your order has been delivered!* 🎉
+
+Your order #${order.orderId} from *${order.restaurantName}* has been delivered.
+
+We hope you enjoy your food! If you have a moment, please rate your delivery experience in our DigiDine app.
+
+Thank you for choosing DigiDine! 🙏
+                    `;
+                    
+                    await client.messages.create({
+                        body: customerMessage,
+                        from: `whatsapp:${whatsappNumber}`,
+                        to: `whatsapp:${customerPhone}`
+                    });
+                    
+                    console.log(`Customer delivery confirmation WhatsApp sent to ${customerPhone}`);
+                } catch (error) {
+                    console.error('Error sending delivery confirmation WhatsApp to customer:', error);
+                }
+            }
+            
+            // Send completion notification to driver
+            if (order.driverInfo && order.driverInfo.phone) {
+                try {
+                    const driverPhone = formatPhoneForWhatsApp(order.driverInfo.phone);
+                    
+                    const driverMessage = `
+✅ *Delivery Completed - Order #${order.orderId}* ✅
+
+Great job! You've successfully delivered the order from ${order.restaurantName}.
+
+Your delivery has been recorded in the system. Please check the app for your next delivery assignment.
+
+Thank you for your hard work with DigiDine! 👍
+                    `;
+                    
+                    await client.messages.create({
+                        body: driverMessage,
+                        from: `whatsapp:${whatsappNumber}`,
+                        to: `whatsapp:${driverPhone}`
+                    });
+                    
+                    console.log(`Driver completion WhatsApp sent to ${driverPhone}`);
+                } catch (error) {
+                    console.error('Error sending completion WhatsApp to driver:', error);
+                }
+            }
+        }
+
+        // Emit socket event if using Socket.io
         if (req.io) {
-            req.io.to(`order_${orderId}`).emit('order_status_update', {
+            req.io.to(`order_${orderId}`).emit('order_status_updated', {
                 orderId,
-                status: newStatus,
-                timestamp: new Date(),
-                driverId: order.diliveryDriverId,
-                driverInfo: order.driverInfo,
-                driverLocation: order.driverCurrentLocation
+                oldStatus,
+                newStatus: newStatus,
+                timestamp: new Date()
             });
-            
-            // Also notify the restaurant if applicable
-            if (order.restaurant) {
-                req.io.to(`restaurant_${order.restaurant}`).emit('order_status_update', {
-                    orderId,
-                    status: newStatus,
-                    timestamp: new Date()
-                });
-            }
-            
-            // Notify driver if assigned
-            if (order.diliveryDriverId) {
-                req.io.to(`driver_${order.diliveryDriverId}`).emit('order_status_update', {
-                    orderId,
-                    status: newStatus,
-                    timestamp: new Date()
-                });
-            }
         }
 
         res.status(200).json({
@@ -111,6 +240,37 @@ exports.updateOrderStatus = async (req, res) => {
         });
     }
 };
+
+// Helper function to format phone numbers for WhatsApp
+function formatPhoneForWhatsApp(phoneNumber) {
+    // Remove any non-digit characters
+    let cleanPhone = phoneNumber.replace(/\D/g, '');
+
+    // Handle Sri Lankan phone number formats
+    if (cleanPhone.startsWith('0')) {
+        cleanPhone = '94' + cleanPhone.substring(1);
+    } 
+    // If number doesn't start with + but has 9 digits (without country code)
+    else if (!cleanPhone.startsWith('+') && cleanPhone.length === 9) {
+        cleanPhone = '94' + cleanPhone;
+    }
+    // If number already has country code but missing +
+    else if (cleanPhone.startsWith('94') && cleanPhone.length === 11) {
+        // WhatsApp expects the country code without +
+        cleanPhone = cleanPhone;
+    }
+    // If number doesn't have country code or + (just the number without the leading 0)
+    else if (!cleanPhone.startsWith('+') && !cleanPhone.startsWith('94') && cleanPhone.length < 11) {
+        cleanPhone = '94' + cleanPhone;
+    }
+    // If number already has + symbol, remove it
+    else if (cleanPhone.startsWith('+')) {
+        cleanPhone = cleanPhone.substring(1);
+    }
+
+    console.log(`Formatted phone for WhatsApp: ${cleanPhone}`);
+    return cleanPhone;
+}
 
 // Cancel an order with reason
 exports.cancelOrder = async (req, res) => {

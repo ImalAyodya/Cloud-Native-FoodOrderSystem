@@ -135,11 +135,7 @@ exports.createOrder = async (req, res) => {
                             <td>$${order.totalAmount.toFixed(2)}</td>
                         </tr>
                     </table>
-                    
-                    <p>You can track the status of your order through our DigiDine app or website.</p>
-                    
-                    <a href="https://digidine.com/track-order/${order.orderId}" class="button">Track Your Order</a>
-                    
+                                        
                     <p>If you have any questions or need assistance, please don't hesitate to contact us:</p>
                     <p>Email: support@digidine.com | Phone: (123) 456-7890</p>
                 </div>
@@ -172,17 +168,15 @@ exports.createOrder = async (req, res) => {
         const whatsappMessage = `
 🍽️ *DigiDine Order Confirmation* 🍽️
 
-Hello ${order.customer.name}! Your order from *${order.restaurantName}* has been confirmed.
+Hello ${order.customer.name}! Your order from *${order.restaurantName}* has been placed.
 
 *Order #:* ${order.orderId}
-*Estimated Delivery:* 30-45 minutes
+*Your Order Will be on its way soon*
 
 *Your Order:*
 ${itemList}
 
 *Total:* $${order.totalAmount.toFixed(2)}
-
-Track your order here: https://digidine.com/track-order/${order.orderId}
 
 Thank you for choosing DigiDine! 🙏
         `;
@@ -714,6 +708,7 @@ exports.updateDriverAssignment = async (req, res) => {
 
     // Update driver info if provided
     if (driverInfo) {
+      // Ensure driverInfo phone is properly set - use provided phone or keep existing
       order.driverInfo = {
         name: driverInfo.name || order.driverInfo?.name,
         phone: driverInfo.phone || order.driverInfo?.phone,
@@ -724,6 +719,101 @@ exports.updateDriverAssignment = async (req, res) => {
 
     // Save the updated order
     await order.save();
+
+    // Send WhatsApp notifications if the driver accepted the order
+    if (assignmentStatus === 'accepted') {
+      // Initialize Twilio client
+      const accountSid = process.env.TWILIO_ACCOUNT_SID;
+      const authToken = process.env.TWILIO_AUTH_TOKEN;
+      const client = twilio(accountSid, authToken);
+      const whatsappNumber = process.env.TWILIO_WHATSAPP_PHONE_NUMBER;
+
+      // 1. Send WhatsApp notification to the driver
+      if (order.driverInfo && order.driverInfo.phone) {
+        try {
+          // Format driver's phone for WhatsApp
+          let driverPhone = formatPhoneForWhatsApp(order.driverInfo.phone);
+          
+          // Create a simplified item list for driver
+          const itemList = order.items.map(item => 
+            `• ${item.name} (${item.size}) x${item.quantity}`
+          ).join('\n');
+          
+          // Message for the driver with important delivery details
+          const driverMessage = `
+🚚 *New Order Accepted - #${order.orderId}* 🚚
+
+You have accepted the order from ${order.restaurantName}!
+
+*Pickup Details:*
+📍 Restaurant: ${order.restaurantName}
+🍽️ Items:
+${itemList}
+
+*Delivery Details:*
+📍 Customer: ${order.customer.name}
+🏠 Address: ${order.customer.address}
+📱 Phone: ${order.customer.phone}
+
+Total Order Value: $${order.totalAmount.toFixed(2)}
+
+Please proceed to the restaurant to pick up the order. Update your status in the app when you're on the way.
+
+Thank you for delivering with DigiDine! 🙏
+          `;
+          
+          // Send WhatsApp message to driver
+          await client.messages.create({
+            body: driverMessage,
+            from: `whatsapp:${whatsappNumber}`,
+            to: `whatsapp:${driverPhone}`
+          });
+          
+          console.log(`Driver WhatsApp notification sent to ${driverPhone}`);
+        } catch (whatsappError) {
+          console.error('Error sending WhatsApp to driver:', whatsappError);
+          // Continue execution even if WhatsApp message fails
+        }
+      }
+
+      // 2. Send WhatsApp notification to the customer
+      if (order.customer.phone) {
+        try {
+          // Format customer's phone for WhatsApp
+          let customerPhone = formatPhoneForWhatsApp(order.customer.phone);
+          
+          // Message for the customer with driver details
+          const customerMessage = `
+🚚 *DigiDine Order Update - #${order.orderId}* 🚚
+
+Great news! Your order from *${order.restaurantName}* has been accepted by a driver and is being prepared for delivery.
+
+*Your Driver Details:*
+👤 Name: ${order.driverInfo?.name || 'Assigned Driver'}
+🚘 Vehicle: ${order.driverInfo?.vehicleType || 'Standard vehicle'}
+🔢 License Plate: ${order.driverInfo?.licensePlate || 'Not provided'}
+
+You'll receive another update when your driver is on the way with your food.
+
+You can track your delivery in real-time through our DigiDine app.
+
+Thank you for choosing DigiDine! 🙏
+          `;
+          
+          // Send WhatsApp message to customer
+          await client.messages.create({
+            body: customerMessage,
+            from: `whatsapp:${whatsappNumber}`,
+            to: `whatsapp:${customerPhone}`
+          });
+          
+          console.log(`Customer WhatsApp notification sent to ${customerPhone}`);
+        } catch (whatsappError) {
+          console.error('Error sending WhatsApp to customer:', whatsappError);
+          // Continue execution even if WhatsApp message fails
+        }
+      }
+    }
 
     // Emit a socket event for real-time updates
     if (req.io) {
@@ -749,6 +839,37 @@ exports.updateDriverAssignment = async (req, res) => {
     });
   }
 };
+
+// Helper function to format phone numbers for WhatsApp
+function formatPhoneForWhatsApp(phoneNumber) {
+  // Remove any non-digit characters
+  let cleanPhone = phoneNumber.replace(/\D/g, '');
+  
+  // Handle Sri Lankan phone number formats
+  if (cleanPhone.startsWith('0')) {
+      cleanPhone = '94' + cleanPhone.substring(1);
+  } 
+  // If number doesn't start with + but has 9 digits (without country code)
+  else if (!cleanPhone.startsWith('+') && cleanPhone.length === 9) {
+      cleanPhone = '94' + cleanPhone;
+  }
+  // If number already has country code but missing +
+  else if (cleanPhone.startsWith('94') && cleanPhone.length === 11) {
+      // WhatsApp expects the country code without +
+      cleanPhone = cleanPhone;
+  }
+  // If number doesn't have country code or + (just the number without the leading 0)
+  else if (!cleanPhone.startsWith('+') && !cleanPhone.startsWith('94') && cleanPhone.length < 11) {
+      cleanPhone = '94' + cleanPhone;
+  }
+  // If number already has + symbol, remove it
+  else if (cleanPhone.startsWith('+')) {
+      cleanPhone = cleanPhone.substring(1);
+  }
+
+  console.log(`Formatted phone for WhatsApp: ${cleanPhone}`);
+  return cleanPhone;
+}
 
 // Update driver location for an order
 exports.updateDriverLocation = async (req, res) => {
