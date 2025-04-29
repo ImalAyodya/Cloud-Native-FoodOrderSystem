@@ -284,6 +284,83 @@ const getRestaurantAnalytics = async (req, res) => {
   }
 };
 
+const getRestaurantsDashboardData = async (req, res) => {
+  try {
+    // Get all restaurants with basic info
+    const restaurants = await Restaurant.find({})
+      .select('name images rating address status isAvailable createdAt');
+    
+    // Get total count of restaurants
+    const totalRestaurants = await Restaurant.countDocuments({});
+    const activeRestaurants = await Restaurant.countDocuments({ status: 'active', isAvailable: true });
+    const pendingRestaurants = await Restaurant.countDocuments({ status: 'pending' });
+    const suspendedRestaurants = await Restaurant.countDocuments({ status: 'suspended' });
+    
+    // Get restaurant count by cuisine (top cuisines)
+    const cuisineStats = await Restaurant.aggregate([
+      { $unwind: '$cuisine' },
+      { $group: { _id: '$cuisine', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 }
+    ]);
+    
+    // Get restaurant count by city/location
+    const locationStats = await Restaurant.aggregate([
+      { $group: { _id: '$location.city', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 }
+    ]);
+    
+    // Get recently added restaurants
+    const recentRestaurants = await Restaurant.find({})
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('name images rating address status createdAt');
+    
+    // Get top rated restaurants
+    const topRatedRestaurants = await Restaurant.find({})
+      .sort({ rating: -1 })
+      .limit(5)
+      .select('name images rating address status');
+    
+    // Get restaurants by price range
+    const priceRangeStats = await Restaurant.aggregate([
+      { $group: { _id: '$priceRange', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } }
+    ]);
+    
+    // Compile all data into dashboard response
+    const dashboardData = {
+      counts: {
+        totalRestaurants,
+        activeRestaurants,
+        pendingRestaurants,
+        suspendedRestaurants
+      },
+      recentRestaurants,
+      topRatedRestaurants,
+      cuisineStats: cuisineStats.map(item => ({ name: item._id, count: item.count })),
+      locationStats: locationStats.map(item => ({ name: item._id || 'Unspecified', count: item.count })),
+      priceRangeStats: priceRangeStats.map(item => ({ range: item._id, count: item.count })),
+      restaurants: restaurants.map(restaurant => ({
+        _id: restaurant._id,
+        name: restaurant.name,
+        image: restaurant.images?.logo || restaurant.images?.banner || null,
+        rating: restaurant.rating,
+        address: restaurant.address,
+        status: restaurant.status,
+        isAvailable: restaurant.isAvailable,
+        createdAt: restaurant.createdAt
+      }))
+    };
+    
+    res.status(200).json({ success: true, data: dashboardData });
+  } catch (error) {
+    console.error('Error fetching restaurant dashboard data:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
 module.exports = {
   addRestaurant,
   getRestaurants,
@@ -294,5 +371,6 @@ module.exports = {
   deleteRestaurant,
   getNearbyRestaurants,
   getRestaurantsByUserId,
-  getRestaurantAnalytics
+  getRestaurantAnalytics,
+  getRestaurantsDashboardData
 };
