@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-const User = require('../../../User_Management_And_Payment_Service/backend/models/User');
 
 const protect = async (req, res, next) => {
   try {
@@ -18,12 +17,12 @@ const protect = async (req, res, next) => {
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      console.log('Decoded token:', decoded); // Debug log
+      console.log('Decoded token:', decoded);
 
       req.user = {
         id: decoded.id,
       };
-      console.log('req.user:', req.user); // Debug log
+      console.log('req.user:', req.user);
 
       next();
     } catch (error) {

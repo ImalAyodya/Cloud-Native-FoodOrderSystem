@@ -1,8 +1,8 @@
 const Restaurant = require('../models/Restaurant');
-const mongoose = require('mongoose'); // Added mongoose for ObjectId validation
+const mongoose = require('mongoose');
 const path = require('path');
 const MenuItem = require('../models/MenuItem');
-const Order = require('../../../Order_Mangement_And_Notification_Service/backend/models/Order');
+const axios = require('axios'); // Add this line
 
 // Create new restaurant
 const addRestaurant = async (req, res) => {
@@ -229,6 +229,27 @@ const getRestaurantsByUserId = async (req, res) => {
   }
 };
 
+// Example of how to fetch order data from the Order service
+const getOrderDataForRestaurant = async (restaurantId) => {
+  try {
+    const response = await axios.get(
+      `${process.env.ORDER_SERVICE_URL}/api/orders/analytics/${restaurantId}`,
+      {
+        headers: {
+          'service-auth-key': process.env.SERVICE_AUTH_KEY
+        }
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching order data:', error);
+    return {
+      totalOrders: 0,
+      totalRevenue: 0
+    };
+  }
+};
+
 const getRestaurantAnalytics = async (req, res) => {
   try {
     const { id } = req.params;
@@ -245,18 +266,21 @@ const getRestaurantAnalytics = async (req, res) => {
     }
 
     // Fetch menu items for the restaurant
-    const menuItems = await MenuItem.find({ id }).select('name category cuisine price');
+    const menuItems = await MenuItem.find({ restaurantId: id }).select('name category cuisine price');
+    
+    // Get order data from the Order service
+    const orderData = await getOrderDataForRestaurant(id);
 
-    // Hardcoded analytics data
+    // Use the real order data if available, otherwise use hardcoded values
     const analytics = {
       totalMenuItems: menuItems.length,
-      totalOrders: Order.length, // Hardcoded
-      totalRevenue: 5000, // Hardcoded
-      revenueData: [
+      totalOrders: orderData.totalOrders || 120, // Use real data or fallback to hardcoded
+      totalRevenue: orderData.totalRevenue || 5000, // Use real data or fallback to hardcoded
+      revenueData: orderData.revenueData || [
         { date: '2025-04-01', revenue: 1000 },
         { date: '2025-04-02', revenue: 1200 },
         { date: '2025-04-03', revenue: 1500 },
-      ], // Hardcoded
+      ],
       menuItemsByCategory: menuItems.reduce((acc, item) => {
         const existingCategory = acc.find((entry) => entry.name === item.category);
         if (existingCategory) {
@@ -266,11 +290,11 @@ const getRestaurantAnalytics = async (req, res) => {
         }
         return acc;
       }, []),
-      popularDishes: [
+      popularDishes: orderData.popularDishes || [
         { name: 'Pizza', orders: 50 },
         { name: 'Burger', orders: 40 },
         { name: 'Pasta', orders: 30 },
-      ], // Hardcoded
+      ],
     };
 
     // Return the analytics data
