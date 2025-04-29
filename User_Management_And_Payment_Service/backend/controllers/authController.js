@@ -4,6 +4,8 @@ const crypto = require('crypto');
 const User = require('../models/User');
 const sendEmail = require('../utils/email');
 const { sendWhatsApp } = require('../utils/smsService'); // Updated to import WhatsApp function
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
 // Register a new user
 const register = async (req, res) => {
@@ -390,11 +392,82 @@ const logout = async (req, res) => {
     res.status(200).json({ success: true, message: 'Logged out successfully' });
 };
 
+// Configure Passport for Google OAuth
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: `${process.env.FRONTEND_URL}/api/auth/google/callback`,
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        // Check if user already exists
+        const existingUser = await User.findOne({ email: profile.emails[0].value });
+
+        if (existingUser) {
+          return done(null, existingUser);
+        }
+
+        // If user doesn't exist, create a new user
+        const newUser = new User({
+          name: profile.displayName,
+          email: profile.emails[0].value,
+          avatar: profile.photos[0].value,
+          role: 'customer', // Default role for Google sign-in users
+          isVerified: true, // Automatically verify users signing in with Google
+        });
+
+        await newUser.save();
+        return done(null, newUser);
+      } catch (error) {
+        console.error('Google Sign-In Error:', error);
+        return done(error, null);
+      }
+    }
+  )
+);
+
+// Serialize user for session
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+// Deserialize user from session
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findById(id);
+    done(null, user);
+  } catch (error) {
+    done(error, null);
+  }
+});
+
+// Google Sign-In Redirect
+const googleSignIn = passport.authenticate('google', {
+  scope: ['profile', 'email'],
+});
+
+// Google Sign-In Callback
+const googleCallback = (req, res) => {
+  // Generate JWT token for the authenticated user
+  const token = jwt.sign(
+    { id: req.user._id, role: req.user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+
+  // Redirect to frontend with token
+  res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}`);
+};
+
 module.exports = {
     register,
     login,
     verifyEmail,
     requestPasswordReset,
     resetPassword,
-    logout
+    logout,
+    googleSignIn,
+    googleCallback,
 };

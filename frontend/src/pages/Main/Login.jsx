@@ -396,7 +396,7 @@ const LoginPage = () => {
                     className="w-full flex items-center justify-center py-3.5 px-4 border border-gray-200 rounded-xl shadow-sm bg-white text-gray-700 hover:bg-gray-50 transition-all"
                   >
                     <FaGoogle className="mr-2 text-red-500" />
-                    <span className="text-sm font-medium">Continue with Google</span>
+                    <span className="text-sm font-medium">Sign in with Google</span>
                   </motion.button>
                 </div>
               </div>

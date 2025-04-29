@@ -94,15 +94,15 @@ const Register = () => {
       });
       
       // Show success toast with custom styling
-      toast.success('Registration successful! Please check your email to verify your account.', {
+      toast.success('Registration successful!', {
         icon: '🎉',
         progressStyle: { background: '#f97316' },
       });
       
-      // Navigate to verification page with slight delay for toast visibility
       setTimeout(() => {
-        navigate('/verification-sent', { state: { email: formData.email } });
-      }, 2000);
+        navigate('/login', { replace: true });
+      },2000)
+      
       
     } catch (error) {
       console.error('Registration error:', error);

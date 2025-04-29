@@ -161,7 +161,7 @@ const updateUser = async (req, res) => {
     }
 };
 
-// Delete a user (soft delete)
+// Delete a user (permanent delete)
 const deleteUser = async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
@@ -178,13 +178,12 @@ const deleteUser = async (req, res) => {
             });
         }
         
-        // Soft delete by setting isActive to false
-        user.isActive = false;
-        await user.save();
+        // Perform permanent deletion
+        await User.findByIdAndDelete(req.params.id);
         
         res.status(200).json({
             success: true,
-            message: 'User deleted successfully'
+            message: 'User permanently deleted successfully'
         });
     } catch (error) {
         console.error('Delete user error:', error);

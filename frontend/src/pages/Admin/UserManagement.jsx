@@ -104,6 +104,7 @@ const UserManagement = () => {
       let response;
       
       if (modalMode === 'add') {
+        // For adding a new user, send all form data
         response = await axios.post(
           `http://localhost:5000/api/admin/users`,
           formData,
@@ -113,9 +114,24 @@ const UserManagement = () => {
         );
         toast.success('User created successfully');
       } else if (modalMode === 'edit') {
+        // For editing, only send updatable fields (exclude password if empty)
+        const updateData = {
+          name: formData.name,
+          email: formData.email,
+          phoneNo: formData.phoneNo || '',
+          address: formData.address || '',
+          role: formData.role,
+          isActive: formData.isActive
+        };
+        
+        // Don't send password field for updates unless it's explicitly set
+        if (formData.password && formData.password.trim() !== '') {
+          updateData.password = formData.password;
+        }
+        
         response = await axios.put(
           `http://localhost:5000/api/admin/users/${selectedUser._id}`,
-          formData,
+          updateData,
           {
             headers: { Authorization: `Bearer ${token}` }
           }
@@ -126,37 +142,53 @@ const UserManagement = () => {
       setShowModal(false);
       fetchUsers();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'An error occurred');
-      console.error(error);
+      console.error('API Error:', error.response?.data || error.message);
+      toast.error(error.response?.data?.message || 'An error occurred while saving user data');
     }
   };
 
+  // Fix the handleDelete function
   const handleDelete = async (userId) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
         const token = localStorage.getItem('token');
+        
+        // Check if we have a token
+        if (!token) {
+          toast.error('Authentication token not found. Please login again.');
+          return;
+        }
+        
+        // Make sure we're using the correct endpoint and HTTP method
         const response = await axios.delete(
           `http://localhost:5000/api/admin/users/${userId}`,
           {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { 
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
           }
         );
         
         if (response.data.success) {
           toast.success('User deleted successfully');
+          // Refresh the users list
           fetchUsers();
+        } else {
+          toast.error(response.data.message || 'Failed to delete user');
         }
       } catch (error) {
+        console.error('Delete user error:', error);
         toast.error(error.response?.data?.message || 'Failed to delete user');
-        console.error(error);
       }
     }
   };
 
+  // Fix the toggleUserStatus function
   const toggleUserStatus = async (userId, currentStatus) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.put(
+      const response = await axios.patch(
         `http://localhost:5000/api/admin/users/${userId}/status`,
         { isActive: !currentStatus },
         {
@@ -166,10 +198,10 @@ const UserManagement = () => {
       
       if (response.data.success) {
         toast.success(`User ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
-        fetchUsers();
+        fetchUsers(); // Refresh the users list
       }
     } catch (error) {
-      toast.error('Failed to update user status');
+      toast.error(error.response?.data?.message || 'Failed to update user status');
       console.error(error);
     }
   };
@@ -337,13 +369,13 @@ const UserManagement = () => {
                             >
                               {user.isActive ? <FaBan /> : <FaCheck />}
                             </button>
-                            <button 
+                            {/* <button 
                               onClick={() => handleResetPassword(user._id)}
                               className="text-indigo-500 hover:text-indigo-700"
                               title="Reset Password"
                             >
                               <FaLock />
-                            </button>
+                            </button> */}
                             <button 
                               onClick={() => handleDelete(user._id)}
                               className="text-red-500 hover:text-red-700"
