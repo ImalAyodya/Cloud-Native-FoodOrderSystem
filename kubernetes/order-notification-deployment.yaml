@@ -16,8 +16,7 @@ spec:
     spec:
       containers:
       - name: order-notification
-        image: order-notification-service:latest
-        imagePullPolicy: IfNotPresent
+        image: cloud-native-foodordersystem-order-notification-service:latest
         ports:
         - containerPort: 5001
         env:

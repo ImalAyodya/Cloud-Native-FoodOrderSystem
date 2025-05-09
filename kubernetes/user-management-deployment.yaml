@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: user-management
-        image: user-management-service:latest
+        image: cloud-native-foodordersystem-user-management-service:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5000

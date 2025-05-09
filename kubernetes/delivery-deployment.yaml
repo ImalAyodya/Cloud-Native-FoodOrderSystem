@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: delivery
-        image: delivery:latest
+        image: cloud-native-foodordersystem-delivery-service:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5002
